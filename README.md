@@ -6,8 +6,6 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
 
 # Installation
 
-This plugin is not yet on NPM. Installation only via GitHub at the moment...
-
 1. Install homebridge using: npm install -g homebridge <br>
 2. Install this plugin using npm install -g homebridge-tcc
 3. Update your configuration file. See sample-config below for a sample.
