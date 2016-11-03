@@ -1,0 +1,27 @@
+{
+  "name": "homebridge-tcc",
+  "version": "0.0.1",
+  "description": "Honeywell Total Connect Comfort support for Homebridge: https://github.com/nfarina/homebridge",
+  "license": "ISC",
+  "keywords": [
+    "homebridge-plugin",
+    "tcc",
+    "honeywell"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/NorthernMan54/homebridge-tcc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NorthernMan54/homebridge-tcc/issues"
+  },
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.3.1"
+  },
+  "dependencies": {
+    "lodash": "~2.4.1",
+    "q": "~1.0.1",
+    "request": "~2.34.0"
+  }
+}
