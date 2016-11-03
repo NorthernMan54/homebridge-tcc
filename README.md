@@ -42,5 +42,5 @@ It seems to be vitally important to set the right system time, especially on ras
 
 # Credits
 
-luc-ass - Borrowed your homebridge-evohome plugin as a base to start from
-Dan / Ghostbit - Borrowed your python script for the page flow of the TCC website
+- luc-ass - Borrowed your homebridge-evohome plugin as a base to start from
+- Dan / Ghostbit - Borrowed your python script for the page flow of the TCC website
