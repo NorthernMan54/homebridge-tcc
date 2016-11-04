@@ -1,6 +1,5 @@
 # homebridge-tcc
 
-
 This is a plugin for Honeywell Total Connect Comfort. It is a partially-working
 implementation into HomeKit. This plugin is work in progress. Help is appreciated!
 
@@ -44,3 +43,4 @@ It seems to be vitally important to set the right system time, especially on ras
 
 - luc-ass - Borrowed your homebridge-evohome plugin as a base to start from
 - Dan / Ghostbit - Borrowed your python script for the page flow of the TCC website
+- bwdeleeuw - Fahrenheit testing

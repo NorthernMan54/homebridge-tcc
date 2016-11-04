@@ -1,6 +1,6 @@
 // This platform integrates Honeywell tcc into homebridge
 // As I only own single thermostat, so this only works with one, but it is
-// conceivable to handle mulitple.
+// conceivable to handle mulitple with additional coding.
 //
 // The configuration is stored inside the ../config.json
 // {
@@ -8,7 +8,7 @@
 //     "name" : "tcc",
 //     "username" : "username/email",
 //     "password" : "password",
-//     "deviceID" : "91db1612-73fd-4500-91b2-e63b069b185c"
+//     "deviceID" : "123456789"
 // }
 //
 
@@ -96,23 +96,30 @@ tccPlatform.prototype.periodicUpdate = function(t) {
                         var oldTargetTemp = myAccessories[i].device.latestData.uiData.HeatSetpoint;
                         var newCurrentTemp = device.latestData.uiData.DispTemperature;
                         var newTargetTemp = device.latestData.uiData.HeatSetpoint;
+
+                        var CurrentHeatingCoolingState = device.latestData.uiData.EquipmentOutputStatus * device.latestData.uiData.SystemSwitchPosition;
+                        var oldCurrentHeatingCoolingState = myAccessories[i].device.latestData.uiData.EquipmentOutputStatus * myAccessories[i].device.latestData.uiData.SystemSwitchPosition;
+
                         myAccessories[i].device = device;
 
                         var service = myAccessories[i].thermostatService;
 
                         if (oldCurrentTemp != newCurrentTemp && service) {
                             this.log("Updating: " + device.latestData.uiData.DeviceID + " currentTempChange from: " + oldCurrentTemp + " to: " + newCurrentTemp);
-                            var charCT = service.getCharacteristic(Characteristic.CurrentTemperature);
-                            if (charCT) charCT.getValue();
-                            else this.log("No Characteristic.CurrentTemperature found " + service);
+                            service.getCharacteristic(Characteristic.CurrentTemperature)
+                              .getValue();
                         }
 
+                        if (CurrentHeatingCoolingState != oldCurrentHeatingCoolingState && service) {
+                            this.log("Updating: " + device.latestData.uiData.DeviceID + " HeatingCoolingState from: " + oldCurrentHeatingCoolingState + " to: " + CurrentHeatingCoolingState);
+                            service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
+                              .getValue();
+                        }
 
                         if (oldTargetTemp != newTargetTemp && service) {
                             this.log("Updating: " + device.latestData.uiData.DeviceID + " targetTempChange from: " + oldTargetTemp + " to: " + newTargetTemp);
-                            var charTT = service.getCharacteristic(Characteristic.TargetTemperature);
-                            if (charTT) charCT.getValue();
-                            else this.log("No Characteristic.TargetTemperature found " + service);
+                            service.getCharacteristic(Characteristic.TargetTemperature)
+                              .getValue();
                         }
 
 
@@ -148,9 +155,13 @@ tccThermostatAccessory.prototype = {
 
     getCurrentTemperature: function(callback) {
         var that = this;
-        //      this.log("getCurrentTemperature");
-        // need to refresh data if outdated!!
+        
         var currentTemperature = this.device.latestData.uiData.DispTemperature;
+        switch (this.device.latestData.uiData.DisplayUnits) {
+            case "F":
+                currentTemperature = (currentTemperature - 32) * 5 / 9;
+                break;
+        }
         callback(null, Number(currentTemperature));
         that.log("Current temperature of " + this.name + " is " + currentTemperature + "°");
     },
@@ -228,11 +239,9 @@ tccThermostatAccessory.prototype = {
 
     getTargetTemperature: function(callback) {
         var that = this;
-        //    that.log("getTargetTemperature");
-        // gives back the target temperature of thermostat
-        // crashes the plugin IF there is no value defined (like
-        // with DOMESTIC_HOT_WATER) so we need to chek if it
-        // is defined first
+
+        // Homebridge expects temperatures in C, but Honeywell will return F if configured.
+
         if (this.model = "EMEA_ZONE") {
             var targetTemperature = this.device.latestData.uiData.HeatSetpoint;
             //        that.log("Device type is: " + this.model + ". Target temperature should be there.");
@@ -241,6 +250,11 @@ tccThermostatAccessory.prototype = {
             var targetTemperature = 0;
             that.log("Device type is: " + this.model + ". Target temperature is probably NOT there (this is normal).");
             that.log("Will set target temperature for", this.name, "to " + targetTemperature + "°");
+        }
+        switch (this.device.latestData.uiData.DisplayUnits) {
+            case "F":
+                targetTemperature = (targetTemperature - 32) * 5 / 9;
+                break;
         }
         callback(null, Number(targetTemperature));
 
@@ -284,7 +298,7 @@ tccThermostatAccessory.prototype = {
             .setCharacteristic(Characteristic.Manufacturer, "Honeywell")
             .setCharacteristic(Characteristic.Model, this.model)
             .setCharacteristic(Characteristic.Name, this.name)
-            .setCharacteristic(Characteristic.SerialNumber, "123456"); // need to stringify the this.serial
+            .setCharacteristic(Characteristic.SerialNumber, this.deviceID); // need to stringify the this.serial
 
         // Thermostat Service
         this.thermostatService = new Service.Thermostat(this.name);
