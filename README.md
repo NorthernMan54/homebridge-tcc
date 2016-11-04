@@ -11,6 +11,13 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
 
 # Configuration
 
+deviceID - Go to the Honeywell Total Connect Comfort website, log in and open your device. Now look in the address bar and you will see something like:
+
+https://mytotalconnectcomfort.com/portal/Device/Control/1234567
+
+The last part is your Device ID.
+
+
 Configuration sample:
 
 ```
