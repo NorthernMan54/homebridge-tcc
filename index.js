@@ -221,9 +221,14 @@ tccThermostatAccessory.prototype = {
         var minutes = 10; // The number of minutes the new target temperature will be effective
         // TODO:
         // verify that the task did succeed
+        switch (this.device.latestData.uiData.DisplayUnits) {
+            case "F":
+                value = (value * 9 / 5) + 32;
+                break;
+        }
 
         tcc.login(this.username, this.password, this.deviceID).then(function(session) {
-            session.setHeatSetpoint(that.serial, value, minutes).then(function(taskId) {
+            session.setHeatSetpoint(that.deviceID, value, minutes).then(function(taskId) {
                 that.log("Successfully changed temperature!");
                 that.log(taskId);
                 // returns taskId if successful
@@ -323,8 +328,8 @@ tccThermostatAccessory.prototype = {
         // this.addCharacteristic(Characteristic.TargetTemperature); READ WRITE
         this.thermostatService
             .getCharacteristic(Characteristic.TargetTemperature)
-            .on('get', this.getTargetTemperature.bind(this));
-        //    .on('set', this.setTargetTemperature.bind(this));
+            .on('get', this.getTargetTemperature.bind(this))
+            .on('set', this.setTargetTemperature.bind(this));
 
         // this.addCharacteristic(Characteristic.TemperatureDisplayUnits); READ WRITE
         this.thermostatService
