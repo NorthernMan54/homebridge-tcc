@@ -189,6 +189,14 @@ tccThermostatAccessory.prototype = {
 
     },
 
+    getCurrentRelativeHumidity: function (callback) {
+        var that = this;
+
+        var currentRelativeHumidity = this.device.latestData.uiData.IndoorHumidity;
+        callback(null, Number(currentRelativeHumidity));
+        that.log("Current relative humidity of " + this.name + " is " + currentRelativeHumidity + "%");
+    },
+
     setTargetHeatingCooling: function(value, callback) {
         var that = this;
 
@@ -338,10 +346,18 @@ tccThermostatAccessory.prototype = {
 
         // Optional Characteristics /////////////////////////////////////////////////////////////
         // this.addOptionalCharacteristic(Characteristic.CurrentRelativeHumidity);
+        this.thermostatService
+            .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+            .on('get', this.getCurrentRelativeHumidity.bind(this));
+
         // this.addOptionalCharacteristic(Characteristic.TargetRelativeHumidity);
         // this.addOptionalCharacteristic(Characteristic.CoolingThresholdTemperature);
         // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
+
         // this.addOptionalCharacteristic(Characteristic.Name);
+        this.thermostatService
+            .getCharacteristic(Characteristic.Name)
+            .on('get', this.getName.bind(this));
 
         return [informationService, this.thermostatService];
 
