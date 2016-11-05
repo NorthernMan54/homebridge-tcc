@@ -189,6 +189,14 @@ tccThermostatAccessory.prototype = {
 
     },
 
+    getCurrentRelativeHumidity: function (callback) {
+        var that = this;
+
+        var currentRelativeHumidity = this.device.latestData.uiData.IndoorHumidity;
+        callback(null, Number(currentRelativeHumidity));
+        that.log("Current relative humidity of " + this.name + " is " + currentRelativeHumidity + "%");
+    },
+
     setTargetHeatingCooling: function(value, callback) {
         var that = this;
 
@@ -221,9 +229,14 @@ tccThermostatAccessory.prototype = {
         var minutes = 10; // The number of minutes the new target temperature will be effective
         // TODO:
         // verify that the task did succeed
+        switch (this.device.latestData.uiData.DisplayUnits) {
+            case "F":
+                value = (value * 9 / 5) + 32;
+                break;
+        }
 
         tcc.login(this.username, this.password, this.deviceID).then(function(session) {
-            session.setHeatSetpoint(that.serial, value, minutes).then(function(taskId) {
+            session.setHeatSetpoint(that.deviceID, value, minutes).then(function(taskId) {
                 that.log("Successfully changed temperature!");
                 that.log(taskId);
                 // returns taskId if successful
@@ -323,8 +336,8 @@ tccThermostatAccessory.prototype = {
         // this.addCharacteristic(Characteristic.TargetTemperature); READ WRITE
         this.thermostatService
             .getCharacteristic(Characteristic.TargetTemperature)
-            .on('get', this.getTargetTemperature.bind(this));
-        //    .on('set', this.setTargetTemperature.bind(this));
+            .on('get', this.getTargetTemperature.bind(this))
+            .on('set', this.setTargetTemperature.bind(this));
 
         // this.addCharacteristic(Characteristic.TemperatureDisplayUnits); READ WRITE
         this.thermostatService
@@ -333,10 +346,18 @@ tccThermostatAccessory.prototype = {
 
         // Optional Characteristics /////////////////////////////////////////////////////////////
         // this.addOptionalCharacteristic(Characteristic.CurrentRelativeHumidity);
+        this.thermostatService
+            .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+            .on('get', this.getCurrentRelativeHumidity.bind(this));
+
         // this.addOptionalCharacteristic(Characteristic.TargetRelativeHumidity);
         // this.addOptionalCharacteristic(Characteristic.CoolingThresholdTemperature);
         // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
+
         // this.addOptionalCharacteristic(Characteristic.Name);
+        this.thermostatService
+            .getCharacteristic(Characteristic.Name)
+            .on('get', this.getName.bind(this));
 
         return [informationService, this.thermostatService];
 
