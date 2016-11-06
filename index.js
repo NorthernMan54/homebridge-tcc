@@ -97,8 +97,8 @@ tccPlatform.prototype.periodicUpdate = function(t) {
                         var newCurrentTemp = device.latestData.uiData.DispTemperature;
                         var newTargetTemp = device.latestData.uiData.HeatSetpoint;
 
-                        var CurrentHeatingCoolingState = device.latestData.uiData.EquipmentOutputStatus * device.latestData.uiData.SystemSwitchPosition;
-                        var oldCurrentHeatingCoolingState = myAccessories[i].device.latestData.uiData.EquipmentOutputStatus * myAccessories[i].device.latestData.uiData.SystemSwitchPosition;
+                        var CurrentHeatingCoolingState = device.latestData.uiData.SystemSwitchPosition;
+                        var oldCurrentHeatingCoolingState = myAccessories[i].device.latestData.uiData.SystemSwitchPosition;
 
                         myAccessories[i].device = device;
 
@@ -178,7 +178,7 @@ tccThermostatAccessory.prototype = {
         var that = this;
 
         that.log("getCurrentHeatingCooling");
-        var CurrentHeatingCoolingState = this.device.latestData.uiData.EquipmentOutputStatus * this.device.latestData.uiData.SystemSwitchPosition;
+        var CurrentHeatingCoolingState = this.device.latestData.uiData.SystemSwitchPosition;
         // OFF  = 0
         // HEAT = 1
         // COOL = 2
@@ -354,9 +354,11 @@ tccThermostatAccessory.prototype = {
 
         // Optional Characteristics /////////////////////////////////////////////////////////////
         // this.addOptionalCharacteristic(Characteristic.CurrentRelativeHumidity);
-        this.thermostatService
-            .getCharacteristic(Characteristic.CurrentRelativeHumidity)
-            .on('get', this.getCurrentRelativeHumidity.bind(this));
+        if (this.device.latestData.uiData.IndoorHumiditySensorAvailable && this.device.latestData.uiData.IndoorHumiditySensorNotFault) {
+            this.thermostatService
+                .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+                .on('get', this.getCurrentRelativeHumidity.bind(this));
+        }
 
         // this.addOptionalCharacteristic(Characteristic.TargetRelativeHumidity);
         // this.addOptionalCharacteristic(Characteristic.CoolingThresholdTemperature);
