@@ -97,6 +97,11 @@ tccPlatform.prototype.periodicUpdate = function(t) {
                         var newCurrentTemp = device.latestData.uiData.DispTemperature;
                         var newTargetTemp = device.latestData.uiData.HeatSetpoint;
 
+                        if (this.device.latestData.uiData.IndoorHumiditySensorAvailable && this.device.latestData.uiData.IndoorHumiditySensorNotFault) {
+                            var oldCurrentRelativeHumidity = myAccessories[i].device.latestData.uiData.CurrentRelativeHumidity;
+                            var newCurrentRelativeHumidity = device.latestData.uiData.CurrentRelativeHumidity;
+                        }
+
                         var CurrentHeatingCoolingState = device.latestData.uiData.SystemSwitchPosition;
                         var oldCurrentHeatingCoolingState = myAccessories[i].device.latestData.uiData.SystemSwitchPosition;
 
@@ -122,6 +127,11 @@ tccPlatform.prototype.periodicUpdate = function(t) {
                               .getValue();
                         }
 
+                        if (this.device.latestData.uiData.IndoorHumiditySensorAvailable && this.device.latestData.uiData.IndoorHumiditySensorNotFault && oldCurrentRelativeHumidity != newCurrentRelativeHumidity && service) {
+                            this.log("Updating: " + device.latestData.uiData.DeviceID + " CurrentRelativeHumidity from: " + oldCurrentRelativeHumidity + " to: " + newCurrentRelativeHumidity);
+                            service.getCharacteristic(Characteristic.CurrentRelativeHumidity)
+                              .getValue();
+                        }
 
                     }
                 }
