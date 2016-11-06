@@ -169,6 +169,44 @@ function toCelsius(temperature) {
     return ((temperature - 32) * 5 / 9);
 }
 
+function toHomeBridgeHeatingCoolingSystem(heatingCoolingSystem) {
+    switch (heatingCoolingSystem) {
+        case 1:
+            return 1;
+            break;
+        case 2:
+            return 0;
+            break;
+        case 3:
+            return 2;
+            break;
+        case 4:
+            return 3;
+            break;
+        default:
+            return 0;
+    }
+}
+
+function toTCCHeadingCoolingSystem(heatingCoolingSystem) {
+    switch (heatingCoolingSystem) {
+        case 0:
+            return 2;
+            break;
+        case 1:
+            return 1
+            break;
+        case 2:
+            return 3
+            break;
+        case 3:
+            return 4
+            break;
+        default:
+            return 0;
+    }
+}
+
 tccThermostatAccessory.prototype = {
 
     getCurrentTemperature: function(callback) {
@@ -188,7 +226,7 @@ tccThermostatAccessory.prototype = {
         var that = this;
 
         that.log("getCurrentHeatingCooling");
-        var CurrentHeatingCoolingState = this.device.latestData.uiData.SystemSwitchPosition;
+        var CurrentHeatingCoolingState = toHomeBridgeHeatingCoolingSystem(this.device.latestData.uiData.SystemSwitchPosition);
         // OFF  = 0
         // HEAT = 1
         // COOL = 2
@@ -218,18 +256,30 @@ tccThermostatAccessory.prototype = {
     setTargetHeatingCooling: function(value, callback) {
         var that = this;
 
-        // not implemented
+        that.log("Setting system switch for", this.name, "to", value);
+        // TODO:
+        // verify that the task did succeed
 
-        that.log("attempted to change targetHeatingCooling: " + value + " - not yet implemented");
-        callback();
-
+        tcc.login(this.username, this.password, this.deviceID).then(function (session) {
+            session.setSystemSwitch(that.deviceID, toTCCHeadingCoolingSystem(value)).then(function (taskId) {
+                that.log("Successfully changed system!");
+                that.log(taskId);
+                // returns taskId if successful
+                // nothing else here...
+                callback(null, Number(1));
+            });
+        }).fail(function (err) {
+            that.log('tcc Failed:', err);
+            callback(null, Number(0));
+        });
+        callback(null, Number(0));
     },
 
     getTargetHeatingCooling: function(callback) {
         var that = this;
         this.log("getTargetHeatingCooling");
 
-        var TargetHeatingCooling = this.device.latestData.uiData.SystemSwitchPosition;
+        var TargetHeatingCooling = toHomeBridgeHeatingCoolingSystem(this.device.latestData.uiData.SystemSwitchPosition);
         // TODO:
         // fixed until it can be requested from tcc...
         // OFF  = 0
@@ -237,7 +287,6 @@ tccThermostatAccessory.prototype = {
         // COOL = 2
         // AUTO = 3
         callback(null, Number(TargetHeatingCooling));
-
     },
 
     setTargetTemperature: function(value, callback) {
