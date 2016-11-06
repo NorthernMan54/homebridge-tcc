@@ -151,19 +151,27 @@ function tccThermostatAccessory(log, name, deviceData, username, password, devic
     this.log = log;
 }
 
+function toFahrenheit(temperature) {
+    return ((temperature * 9 / 5) + 32);
+}
+
+function toCelsius(temperature) {
+    return ((temperature - 32) * 5 / 9);
+}
+
 tccThermostatAccessory.prototype = {
 
     getCurrentTemperature: function(callback) {
         var that = this;
         
         var currentTemperature = this.device.latestData.uiData.DispTemperature;
+        that.log("Current temperature of " + this.name + " is " + currentTemperature + "°");
         switch (this.device.latestData.uiData.DisplayUnits) {
             case "F":
-                currentTemperature = (currentTemperature - 32) * 5 / 9;
+                currentTemperature = toCelsius(currentTemperature);
                 break;
         }
         callback(null, Number(currentTemperature));
-        that.log("Current temperature of " + this.name + " is " + currentTemperature + "°");
     },
 
     getCurrentHeatingCoolingState: function(callback) {
@@ -231,7 +239,7 @@ tccThermostatAccessory.prototype = {
         // verify that the task did succeed
         switch (this.device.latestData.uiData.DisplayUnits) {
             case "F":
-                value = (value * 9 / 5) + 32;
+                value = toFahrenheit(value);
                 break;
         }
 
@@ -266,7 +274,7 @@ tccThermostatAccessory.prototype = {
         }
         switch (this.device.latestData.uiData.DisplayUnits) {
             case "F":
-                targetTemperature = (targetTemperature - 32) * 5 / 9;
+                targetTemperature = toCelsius(targetTemperature);
                 break;
         }
         callback(null, Number(targetTemperature));
