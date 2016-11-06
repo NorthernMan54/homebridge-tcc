@@ -277,6 +277,8 @@ tccThermostatAccessory.prototype = {
                 targetTemperature = toCelsius(targetTemperature);
                 break;
         }
+        if (targetTemperature < 10)
+            targetTemperature = 10;
         callback(null, Number(targetTemperature));
 
     },
