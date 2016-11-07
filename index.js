@@ -426,8 +426,8 @@ tccThermostatAccessory.prototype = {
         // this.addCharacteristic(Characteristic.TargetHeatingCoolingState); READ WRITE
         this.thermostatService
             .getCharacteristic(Characteristic.TargetHeatingCoolingState)
-            .on('get', this.getTargetHeatingCooling.bind(this));
-        //    .on('set', this.setTargetHeatingCooling.bind(this));
+            .on('get', this.getTargetHeatingCooling.bind(this))
+            .on('set', this.setTargetHeatingCooling.bind(this));
 
         // this.addCharacteristic(Characteristic.CurrentTemperature); READ
         this.thermostatService
