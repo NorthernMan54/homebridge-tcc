@@ -82,9 +82,6 @@ tccPlatform.prototype.periodicUpdate = function(t) {
     if (!this.updating && myAccessories) {
         this.updating = true;
 
-        //    tcc.login(this.username, this.password, this.deviceID).then(function(session) {
-
-        //    console.log("PU:81");
         session.CheckDataSession(this.deviceID).then(function(deviceData) {
 
             for (var i = 0; i < myAccessories.length; ++i) {
@@ -93,13 +90,16 @@ tccPlatform.prototype.periodicUpdate = function(t) {
 
                 if (device) {
 
+                    if (this.debug)
+                        this.log("DEBUG ", device);
                     // Check if temp has changed
                     var oldCurrentTemp = myAccessories[i].device.latestData.uiData.DispTemperature;
                     var oldTargetTemp = myAccessories[i].device.latestData.uiData.HeatSetpoint;
                     var newCurrentTemp = device.latestData.uiData.DispTemperature;
                     var newTargetTemp = device.latestData.uiData.HeatSetpoint;
 
-                    if (this.device.latestData.uiData.IndoorHumiditySensorAvailable && this.device.latestData.uiData.IndoorHumiditySensorNotFault) {
+                    if (device.latestData.uiData.IndoorHumiditySensorAvailable &&
+                        device.latestData.uiData.IndoorHumiditySensorNotFault) {
                         var oldCurrentRelativeHumidity = myAccessories[i].device.latestData.uiData.CurrentRelativeHumidity;
                         var newCurrentRelativeHumidity = device.latestData.uiData.CurrentRelativeHumidity;
                     }
@@ -191,15 +191,19 @@ function toHBTemperature(that, temperature) {
 function toHomeBridgeHeatingCoolingSystem(heatingCoolingSystem) {
     switch (heatingCoolingSystem) {
         case 1:
+            // heat
             return 1;
             break;
         case 2:
+            // off
             return 0;
             break;
         case 3:
+            // cool
             return 2;
             break;
         case 4:
+            // auto
             return 3;
             break;
         default:
@@ -210,15 +214,19 @@ function toHomeBridgeHeatingCoolingSystem(heatingCoolingSystem) {
 function toTCCHeadingCoolingSystem(heatingCoolingSystem) {
     switch (heatingCoolingSystem) {
         case 0:
+            // off
             return 2;
             break;
         case 1:
+            // heat
             return 1
             break;
         case 2:
+            // cool
             return 3
             break;
         case 3:
+            // auto
             return 4
             break;
         default:
@@ -252,8 +260,6 @@ tccThermostatAccessory.prototype = {
         // OFF  = 0
         // HEAT = 1
         // COOL = 2
-        if (this.debug)
-            that.log("DEBUG-->", this.device.latestData);
 
         // EquipmentOutputStatus is 1 when HVAC is running
 
