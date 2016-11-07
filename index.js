@@ -19,7 +19,7 @@ var tcc = require('./lib/tcc.js');
 var Service, Characteristic;
 var config;
 var myAccessories = [];
-var session;   // reuse the same login session
+var session; // reuse the same login session
 
 module.exports = function(homebridge) {
     Service = homebridge.hap.Service;
@@ -34,6 +34,7 @@ function tccPlatform(log, config) {
     this.password = config['password'];
     this.name = config['name'];
     this.deviceID = config['deviceID'];
+    this.debug = config['debug'] || false;
 
     this.cache_timeout = 60; // seconds
 
@@ -54,7 +55,8 @@ tccPlatform.prototype = {
             session.CheckDataSession(that.deviceID).then(function(deviceData) {
                 //    console.log("DD -->", deviceData);
 
-                var accessory = new tccThermostatAccessory(that.log, this.name, deviceData, this.username, this.password, this.deviceID);
+                var accessory = new tccThermostatAccessory(that.log, this.name,
+                    deviceData, this.username, this.password, this.deviceID, this.debug);
                 // store accessory in myAccessories
                 myAccessories.push(accessory);
 
@@ -80,74 +82,74 @@ tccPlatform.prototype.periodicUpdate = function(t) {
     if (!this.updating && myAccessories) {
         this.updating = true;
 
-    //    tcc.login(this.username, this.password, this.deviceID).then(function(session) {
+        //    tcc.login(this.username, this.password, this.deviceID).then(function(session) {
 
-            //    console.log("PU:81");
-            session.CheckDataSession(this.deviceID).then(function(deviceData) {
+        //    console.log("PU:81");
+        session.CheckDataSession(this.deviceID).then(function(deviceData) {
 
-                for (var i = 0; i < myAccessories.length; ++i) {
+            for (var i = 0; i < myAccessories.length; ++i) {
 
-                    var device = deviceData;
+                var device = deviceData;
 
-                    if (device) {
+                if (device) {
 
-                        // Check if temp has changed
-                        var oldCurrentTemp = myAccessories[i].device.latestData.uiData.DispTemperature;
-                        var oldTargetTemp = myAccessories[i].device.latestData.uiData.HeatSetpoint;
-                        var newCurrentTemp = device.latestData.uiData.DispTemperature;
-                        var newTargetTemp = device.latestData.uiData.HeatSetpoint;
+                    // Check if temp has changed
+                    var oldCurrentTemp = myAccessories[i].device.latestData.uiData.DispTemperature;
+                    var oldTargetTemp = myAccessories[i].device.latestData.uiData.HeatSetpoint;
+                    var newCurrentTemp = device.latestData.uiData.DispTemperature;
+                    var newTargetTemp = device.latestData.uiData.HeatSetpoint;
 
-                        if (this.device.latestData.uiData.IndoorHumiditySensorAvailable && this.device.latestData.uiData.IndoorHumiditySensorNotFault) {
-                            var oldCurrentRelativeHumidity = myAccessories[i].device.latestData.uiData.CurrentRelativeHumidity;
-                            var newCurrentRelativeHumidity = device.latestData.uiData.CurrentRelativeHumidity;
-                        }
-
-                        var CurrentHeatingCoolingState = device.latestData.uiData.SystemSwitchPosition;
-                        var oldCurrentHeatingCoolingState = myAccessories[i].device.latestData.uiData.SystemSwitchPosition;
-
-                        myAccessories[i].device = device;
-
-                        var service = myAccessories[i].thermostatService;
-
-                        if (oldCurrentTemp != newCurrentTemp && service) {
-                            this.log("Updating: " + device.latestData.uiData.DeviceID + " currentTempChange from: " + oldCurrentTemp + " to: " + newCurrentTemp);
-                            service.getCharacteristic(Characteristic.CurrentTemperature)
-                              .getValue();
-                        }
-
-                        if (CurrentHeatingCoolingState != oldCurrentHeatingCoolingState && service) {
-                            this.log("Updating: " + device.latestData.uiData.DeviceID + " HeatingCoolingState from: " + oldCurrentHeatingCoolingState + " to: " + CurrentHeatingCoolingState);
-                            service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
-                              .getValue();
-                        }
-
-                        if (oldTargetTemp != newTargetTemp && service) {
-                            this.log("Updating: " + device.latestData.uiData.DeviceID + " targetTempChange from: " + oldTargetTemp + " to: " + newTargetTemp);
-                            service.getCharacteristic(Characteristic.TargetTemperature)
-                              .getValue();
-                        }
-
-                        if (this.device.latestData.uiData.IndoorHumiditySensorAvailable && this.device.latestData.uiData.IndoorHumiditySensorNotFault && oldCurrentRelativeHumidity != newCurrentRelativeHumidity && service) {
-                            this.log("Updating: " + device.latestData.uiData.DeviceID + " CurrentRelativeHumidity from: " + oldCurrentRelativeHumidity + " to: " + newCurrentRelativeHumidity);
-                            service.getCharacteristic(Characteristic.CurrentRelativeHumidity)
-                              .getValue();
-                        }
-
+                    if (this.device.latestData.uiData.IndoorHumiditySensorAvailable && this.device.latestData.uiData.IndoorHumiditySensorNotFault) {
+                        var oldCurrentRelativeHumidity = myAccessories[i].device.latestData.uiData.CurrentRelativeHumidity;
+                        var newCurrentRelativeHumidity = device.latestData.uiData.CurrentRelativeHumidity;
                     }
+
+                    var CurrentHeatingCoolingState = device.latestData.uiData.EquipmentOutputStatus;
+                    var oldCurrentHeatingCoolingState = myAccessories[i].device.latestData.uiData.EquipmentOutputStatus;
+
+                    myAccessories[i].device = device;
+
+                    var service = myAccessories[i].thermostatService;
+
+                    if (oldCurrentTemp != newCurrentTemp && service) {
+                        this.log("Updating: " + device.latestData.uiData.DeviceID + " currentTempChange from: " + oldCurrentTemp + " to: " + newCurrentTemp);
+                        service.getCharacteristic(Characteristic.CurrentTemperature)
+                            .getValue();
+                    }
+
+                    if (CurrentHeatingCoolingState != oldCurrentHeatingCoolingState && service) {
+                        this.log("Updating: " + device.latestData.uiData.DeviceID + " HeatingCoolingState from: " + oldCurrentHeatingCoolingState + " to: " + CurrentHeatingCoolingState);
+                        service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
+                            .getValue();
+                    }
+
+                    if (oldTargetTemp != newTargetTemp && service) {
+                        this.log("Updating: " + device.latestData.uiData.DeviceID + " targetTempChange from: " + oldTargetTemp + " to: " + newTargetTemp);
+                        service.getCharacteristic(Characteristic.TargetTemperature)
+                            .getValue();
+                    }
+
+                    if (this.device.latestData.uiData.IndoorHumiditySensorAvailable && this.device.latestData.uiData.IndoorHumiditySensorNotFault && oldCurrentRelativeHumidity != newCurrentRelativeHumidity && service) {
+                        this.log("Updating: " + device.latestData.uiData.DeviceID + " CurrentRelativeHumidity from: " + oldCurrentRelativeHumidity + " to: " + newCurrentRelativeHumidity);
+                        service.getCharacteristic(Characteristic.CurrentRelativeHumidity)
+                            .getValue();
+                    }
+
                 }
-            }.bind(this)).fail(function(err) {
-                this.log('PU Failed:', err);
-            });
-  //      }.bind(this)).fail(function(err) {
-  //          this.log('PU Failed:', err);
-  //      });
+            }
+        }.bind(this)).fail(function(err) {
+            this.log('PU Failed:', err);
+        });
+        //      }.bind(this)).fail(function(err) {
+        //          this.log('PU Failed:', err);
+        //      });
 
         this.updating = false;
     }
 }
 
 // give this function all the parameters needed
-function tccThermostatAccessory(log, name, deviceData, username, password, deviceID) {
+function tccThermostatAccessory(log, name, deviceData, username, password, deviceID, debug) {
     this.name = name;
     this.device = deviceData;
     //this.model = device.thermostatModelType;
@@ -157,57 +159,46 @@ function tccThermostatAccessory(log, name, deviceData, username, password, devic
     this.username = username;
     this.password = password;
     this.deviceID = deviceID;
+    this.debug = debug;
 
     this.log = log;
 }
 
-function toFahrenheit(temperature) {
-    return ((temperature * 9 / 5) + 32);
+function normalizeToThermostat(that, temperature) {
+    switch (that.device.latestData.uiData.DisplayUnits) {
+        case "F":
+            return ((temperature * 9 / 5) + 32);
+            break;
+        default:
+            return temperature;
+    }
+
 }
 
-function toCelsius(temperature) {
-    return ((temperature - 32) * 5 / 9);
+function normalizeToCelsius(that, temperature) {
+    // homekit only deals with Celsius
+
+    switch (that.device.latestData.uiData.DisplayUnits) {
+        case "F":
+            return ((temperature - 32) * 5 / 9);
+            break;
+        default:
+            return temperature;
+    }
+
 }
 
 tccThermostatAccessory.prototype = {
 
-    getCurrentTemperature: function(callback) {
-        var that = this;
-        
-        var currentTemperature = this.device.latestData.uiData.DispTemperature;
-        that.log("Current temperature of " + this.name + " is " + currentTemperature + "°");
-        switch (this.device.latestData.uiData.DisplayUnits) {
-            case "F":
-                currentTemperature = toCelsius(currentTemperature);
-                break;
-        }
-        callback(null, Number(currentTemperature));
-    },
-
-    getCurrentHeatingCoolingState: function(callback) {
-        var that = this;
-
-        that.log("getCurrentHeatingCooling");
-        var CurrentHeatingCoolingState = this.device.latestData.uiData.SystemSwitchPosition;
-        // OFF  = 0
-        // HEAT = 1
-        // COOL = 2
-        // AUTO = 3
-        callback(null, Number(CurrentHeatingCoolingState));
-        that.log("Current Heating/Cooling state of " + this.name + " is " + CurrentHeatingCoolingState);
-    },
-
     getName: function(callback) {
 
         var that = this;
-
         that.log("requesting name of", this.name);
-
         callback(this.name);
 
     },
 
-    getCurrentRelativeHumidity: function (callback) {
+    getCurrentRelativeHumidity: function(callback) {
         var that = this;
 
         var currentRelativeHumidity = this.device.latestData.uiData.IndoorHumidity;
@@ -215,9 +206,35 @@ tccThermostatAccessory.prototype = {
         that.log("Current relative humidity of " + this.name + " is " + currentRelativeHumidity + "%");
     },
 
+    // This is showing what the HVAC unit is doing
+
+    getCurrentHeatingCoolingState: function(callback) {
+        var that = this;
+        // OFF  = 0
+        // HEAT = 1
+        // COOL = 2
+        if (this.debug)
+            that.log("DEBUG-->", this.device.latestData);
+
+        // EquipmentOutputStatus is 1 when HVAC is running
+
+        var CurrentHeatingCoolingState = this.device.latestData.uiData.EquipmentOutputStatus;
+        that.log("getCurrentHeatingCoolingState is ", CurrentHeatingCoolingState);
+        if (CurrentHeatingCoolingState > 2)
+        // Maximum value is 2
+            CurrentHeatingCoolingState = 2;
+        callback(null, Number(CurrentHeatingCoolingState));
+    },
+
+    // This is to change the system switch to a different position
+
     setTargetHeatingCooling: function(value, callback) {
         var that = this;
-
+        // The value property of TargetHeatingCoolingState must be one of the following:
+        //Characteristic.TargetHeatingCoolingState.OFF = 0;
+        //Characteristic.TargetHeatingCoolingState.HEAT = 1;
+        //Characteristic.TargetHeatingCoolingState.COOL = 2;
+        //Characteristic.TargetHeatingCoolingState.AUTO = 3;
         // not implemented
 
         that.log("attempted to change targetHeatingCooling: " + value + " - not yet implemented");
@@ -225,33 +242,54 @@ tccThermostatAccessory.prototype = {
 
     },
 
+    // This is to read the system switch
+
     getTargetHeatingCooling: function(callback) {
         var that = this;
-        this.log("getTargetHeatingCooling");
 
-        var TargetHeatingCooling = this.device.latestData.uiData.SystemSwitchPosition;
-        // TODO:
-        // fixed until it can be requested from tcc...
+        // Homekit allowed values
         // OFF  = 0
         // HEAT = 1
         // COOL = 2
         // AUTO = 3
+
+        var TargetHeatingCooling = this.device.latestData.uiData.SystemSwitchPosition;
+        this.log("getTargetHeatingCooling is ", TargetHeatingCooling);
+
+        if (TargetHeatingCooling > 3)
+        // Maximum value is 3
+            TargetHeatingCooling = 3;
+
         callback(null, Number(TargetHeatingCooling));
 
+    },
+
+    getCurrentTemperature: function(callback) {
+        var that = this;
+
+        var currentTemperature = normalizeToCelsius(this, this.device.latestData.uiData.DispTemperature);
+        that.log("Current temperature of " + this.name + " is " + currentTemperature + "°");
+
+        callback(null, Number(currentTemperature));
     },
 
     setTargetTemperature: function(value, callback) {
         var that = this;
 
+        //    maxValue: 38,
+        //    minValue: 10,
+
         that.log("Setting target temperature for", this.name, "to", value + "°");
         var minutes = 10; // The number of minutes the new target temperature will be effective
+        value = normalizeToThermostat(that, value);
         // TODO:
         // verify that the task did succeed
-        switch (this.device.latestData.uiData.DisplayUnits) {
-            case "F":
-                value = toFahrenheit(value);
-                break;
-        }
+
+        if (value < 10)
+            value = 10;
+
+        if (value > 38)
+            value = 38;
 
         tcc.login(this.username, this.password, this.deviceID).then(function(session) {
             session.setHeatSetpoint(that.deviceID, value, minutes).then(function(taskId) {
@@ -271,10 +309,12 @@ tccThermostatAccessory.prototype = {
     getTargetTemperature: function(callback) {
         var that = this;
 
+        //    maxValue: 38,
+        //    minValue: 10,
         // Homebridge expects temperatures in C, but Honeywell will return F if configured.
 
         if (this.model = "EMEA_ZONE") {
-            var targetTemperature = this.device.latestData.uiData.HeatSetpoint;
+            var targetTemperature = normalizeToCelsius(that, this.device.latestData.uiData.HeatSetpoint);
             //        that.log("Device type is: " + this.model + ". Target temperature should be there.");
             that.log("Target temperature for", this.name, "is", targetTemperature + "°");
         } else {
@@ -282,13 +322,12 @@ tccThermostatAccessory.prototype = {
             that.log("Device type is: " + this.model + ". Target temperature is probably NOT there (this is normal).");
             that.log("Will set target temperature for", this.name, "to " + targetTemperature + "°");
         }
-        switch (this.device.latestData.uiData.DisplayUnits) {
-            case "F":
-                targetTemperature = toCelsius(targetTemperature);
-                break;
-        }
+
         if (targetTemperature < 10)
             targetTemperature = 10;
+
+        if (targetTemperature > 38)
+            targetTemperature = 38;
         callback(null, Number(targetTemperature));
 
     },
