@@ -164,7 +164,7 @@ function tccThermostatAccessory(log, name, deviceData, username, password, devic
     this.log = log;
 }
 
-function normalizeToThermostat(that, temperature) {
+function toTCCTemperature(that, temperature) {
     switch (that.device.latestData.uiData.DisplayUnits) {
         case "F":
             return ((temperature * 9 / 5) + 32);
@@ -175,7 +175,7 @@ function normalizeToThermostat(that, temperature) {
 
 }
 
-function normalizeToCelsius(that, temperature) {
+function toHBTemperature(that, temperature) {
     // homekit only deals with Celsius
 
     switch (that.device.latestData.uiData.DisplayUnits) {
@@ -187,6 +187,45 @@ function normalizeToCelsius(that, temperature) {
     }
 
 }
+
+function toHomeBridgeHeatingCoolingSystem(heatingCoolingSystem) {
+    switch (heatingCoolingSystem) {
+        case 1:
+            return 1;
+            break;
+        case 2:
+            return 0;
+            break;
+        case 3:
+            return 2;
+            break;
+        case 4:
+            return 3;
+            break;
+        default:
+            return 0;
+    }
+}
+
+function toTCCHeadingCoolingSystem(heatingCoolingSystem) {
+    switch (heatingCoolingSystem) {
+        case 0:
+            return 2;
+            break;
+        case 1:
+            return 1
+            break;
+        case 2:
+            return 3
+            break;
+        case 3:
+            return 4
+            break;
+        default:
+            return 0;
+    }
+}
+
 
 tccThermostatAccessory.prototype = {
 
@@ -230,18 +269,25 @@ tccThermostatAccessory.prototype = {
 
     setTargetHeatingCooling: function(value, callback) {
         var that = this;
-        // The value property of TargetHeatingCoolingState must be one of the following:
-        //Characteristic.TargetHeatingCoolingState.OFF = 0;
-        //Characteristic.TargetHeatingCoolingState.HEAT = 1;
-        //Characteristic.TargetHeatingCoolingState.COOL = 2;
-        //Characteristic.TargetHeatingCoolingState.AUTO = 3;
-        // not implemented
 
-        that.log("attempted to change targetHeatingCooling: " + value + " - not yet implemented");
-        callback();
+        that.log("Setting system switch for", this.name, "to", value);
+        // TODO:
+        // verify that the task did succeed
 
+        tcc.login(this.username, this.password, this.deviceID).then(function(session) {
+            session.setSystemSwitch(that.deviceID, toTCCHeadingCoolingSystem(value)).then(function(taskId) {
+                that.log("Successfully changed system!");
+                that.log(taskId);
+                // returns taskId if successful
+                // nothing else here...
+                callback(null, Number(1));
+            });
+        }).fail(function(err) {
+            that.log('tcc Failed:', err);
+            callback(null, Number(0));
+        });
+        callback(null, Number(0));
     },
-
     // This is to read the system switch
 
     getTargetHeatingCooling: function(callback) {
@@ -253,12 +299,8 @@ tccThermostatAccessory.prototype = {
         // COOL = 2
         // AUTO = 3
 
-        var TargetHeatingCooling = this.device.latestData.uiData.SystemSwitchPosition;
+        var TargetHeatingCooling = toHomeBridgeHeatingCoolingSystem(this.device.latestData.uiData.SystemSwitchPosition);
         this.log("getTargetHeatingCooling is ", TargetHeatingCooling);
-
-        if (TargetHeatingCooling > 3)
-        // Maximum value is 3
-            TargetHeatingCooling = 3;
 
         callback(null, Number(TargetHeatingCooling));
 
@@ -267,7 +309,7 @@ tccThermostatAccessory.prototype = {
     getCurrentTemperature: function(callback) {
         var that = this;
 
-        var currentTemperature = normalizeToCelsius(this, this.device.latestData.uiData.DispTemperature);
+        var currentTemperature = toHBTemperature(this, this.device.latestData.uiData.DispTemperature);
         that.log("Current temperature of " + this.name + " is " + currentTemperature + "°");
 
         callback(null, Number(currentTemperature));
@@ -281,7 +323,7 @@ tccThermostatAccessory.prototype = {
 
         that.log("Setting target temperature for", this.name, "to", value + "°");
         var minutes = 10; // The number of minutes the new target temperature will be effective
-        value = normalizeToThermostat(that, value);
+        value = toTCCTemperature(that, value);
         // TODO:
         // verify that the task did succeed
 
@@ -314,7 +356,7 @@ tccThermostatAccessory.prototype = {
         // Homebridge expects temperatures in C, but Honeywell will return F if configured.
 
         if (this.model = "EMEA_ZONE") {
-            var targetTemperature = normalizeToCelsius(that, this.device.latestData.uiData.HeatSetpoint);
+            var targetTemperature = toHBTemperature(that, this.device.latestData.uiData.HeatSetpoint);
             //        that.log("Device type is: " + this.model + ". Target temperature should be there.");
             that.log("Target temperature for", this.name, "is", targetTemperature + "°");
         } else {
