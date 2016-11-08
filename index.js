@@ -321,7 +321,7 @@ tccThermostatAccessory.prototype = {
         callback(null, Number(currentTemperature));
     },
 
-    setTargetTemperature: function (value, callback) {
+    setTargetTemperature: function(value, callback) {
         var that = this;
 
         //    maxValue: 38,
