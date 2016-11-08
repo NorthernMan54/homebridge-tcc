@@ -321,7 +321,7 @@ tccThermostatAccessory.prototype = {
         callback(null, Number(currentTemperature));
     },
 
-    setTargetTemperature: function(value, callback) {
+    setTargetTemperature: function (value, callback) {
         var that = this;
 
         //    maxValue: 38,
@@ -329,9 +329,6 @@ tccThermostatAccessory.prototype = {
 
         that.log("Setting target temperature for", this.name, "to", value + "°");
         var minutes = 10; // The number of minutes the new target temperature will be effective
-        value = toTCCTemperature(that, value);
-        // TODO:
-        // verify that the task did succeed
 
         if (value < 10)
             value = 10;
@@ -339,8 +336,32 @@ tccThermostatAccessory.prototype = {
         if (value > 38)
             value = 38;
 
-        tcc.login(this.username, this.password, this.deviceID).then(function(session) {
-            session.setHeatSetpoint(that.deviceID, value, minutes).then(function(taskId) {
+        value = toTCCTemperature(that, value);
+        // TODO:
+        // verify that the task did succeed
+
+        tcc.login(this.username, this.password, this.deviceID).then(function (session) {
+            var heatSetPoint, coolSetPoint = null;
+            switch (toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
+                case 0:
+                    break;
+                case 1:
+                    heatSetPoint = value;
+                case 2:
+                    coolSetPoint = value;
+                case 3:
+                    if (value > that.device.latestData.uiData.HeatSetpoint)
+                        heatSetPoint = value
+                    else if (value > that.device.latestData.uiData.CoolSetpoint)
+                        coolSetPoint = value
+                    else if ((that.device.latestData.uiData.HeatSetpoint - value) < (value - that.device.latestData.uiData.CoolSetpoint))
+                        coolSetPoint = value
+                    else
+                        heatSetPoint = value
+                default:
+                    break
+            }
+            session.setHeatCoolSetpoint(that.deviceID, heatSetPoint, coolSetPoint).then(function (taskId) {
                 that.log("Successfully changed temperature!");
                 that.log(taskId);
                 // returns taskId if successful
