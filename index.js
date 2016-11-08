@@ -421,6 +421,24 @@ tccThermostatAccessory.prototype = {
         callback(null, Number(temperatureUnits));
     },
 
+    getCoolingThresholdTemperature: function (callback) {
+        var that = this;
+
+        var coolingthresholdTemperature = toHBTemperature(this, this.device.latestData.uiData.CoolSetpoint);
+        that.log("Cool Setpoint temperature of " + this.name + " is " + coolingthresholdTemperature + "°");
+
+        callback(null, Number(coolingthresholdTemperature));
+    },
+
+    getHeatingThresholdTemperature: function (callback) {
+        var that = this;
+
+        var heatingthresholdTemperature = toHBTemperature(this, this.device.latestData.uiData.HeatSetpoint);
+        that.log("Heat Setpoint temperature of " + this.name + " is " + heatingthresholdTemperature + "°");
+
+        callback(null, Number(heatingthresholdTemperature));
+    },
+
     setTemperatureDisplayUnits: function(value, callback) {
         var that = this;
 
@@ -482,7 +500,14 @@ tccThermostatAccessory.prototype = {
 
         // this.addOptionalCharacteristic(Characteristic.TargetRelativeHumidity);
         // this.addOptionalCharacteristic(Characteristic.CoolingThresholdTemperature);
+        this.thermostatService
+            .getCharacteristic(Characteristic.CoolingThresholdTemperature)
+            .on('get', this.getCoolingThresholdTemperature.bind(this));
+
         // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
+        this.thermostatService
+            .getCharacteristic(Characteristic.HeatingThresholdTemperature)
+            .on('get', this.getHeatingThresholdTemperature.bind(this));
 
         // this.addOptionalCharacteristic(Characteristic.Name);
         this.thermostatService
