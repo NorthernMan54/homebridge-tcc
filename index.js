@@ -350,7 +350,7 @@ tccThermostatAccessory.prototype = {
                 case 2:
                     coolSetPoint = value;
                 case 3:
-                    if (value > that.device.latestData.uiData.HeatSetpoint)
+                    if (value < that.device.latestData.uiData.HeatSetpoint)
                         heatSetPoint = value
                     else if (value > that.device.latestData.uiData.CoolSetpoint)
                         coolSetPoint = value
