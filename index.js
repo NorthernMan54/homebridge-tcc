@@ -192,40 +192,40 @@ function toHomeBridgeHeatingCoolingSystem(heatingCoolingSystem) {
     switch (heatingCoolingSystem) {
         case 1:
             // heat
-            return 1;
+            return Characteristic.TargetHeatingCoolingState.HEAT;
             break;
         case 2:
             // off
-            return 0;
+            return Characteristic.TargetHeatingCoolingState.OFF;
             break;
         case 3:
             // cool
-            return 2;
+            return Characteristic.TargetHeatingCoolingState.COOL;
             break;
         case 4:
             // auto
-            return 3;
+            return Characteristic.TargetHeatingCoolingState.AUTO;
             break;
         default:
-            return 0;
+            return Characteristic.TargetHeatingCoolingState.OFF;
     }
 }
 
 function toTCCHeadingCoolingSystem(heatingCoolingSystem) {
     switch (heatingCoolingSystem) {
-        case 0:
+        case Characteristic.TargetHeatingCoolingState.OFF:
             // off
             return 2;
             break;
-        case 1:
+        case Characteristic.TargetHeatingCoolingState.HEAT:
             // heat
             return 1
             break;
-        case 2:
+        case Characteristic.TargetHeatingCoolingState.COOL:
             // cool
             return 3
             break;
-        case 3:
+        case Characteristic.TargetHeatingCoolingState.AUTO:
             // auto
             return 4
             break;
@@ -261,7 +261,8 @@ tccThermostatAccessory.prototype = {
         // HEAT = 1
         // COOL = 2
 
-        // EquipmentOutputStatus is 1 when HVAC is running
+        // EquipmentOutputStatus is 1 when HVAC is running in heat mode, and 2
+        // when running in cool mode
 
         var CurrentHeatingCoolingState = this.device.latestData.uiData.EquipmentOutputStatus;
         that.log("getCurrentHeatingCoolingState is ", CurrentHeatingCoolingState);
