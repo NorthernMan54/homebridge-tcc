@@ -329,16 +329,15 @@ tccThermostatAccessory.prototype = {
 
         that.log("Setting target temperature for", this.name, "to", value + "°");
         var minutes = 10; // The number of minutes the new target temperature will be effective
+        value = toTCCTemperature(that, value);
+        // TODO:
+        // verify that the task did succeed
 
         if (value < 10)
             value = 10;
 
         if (value > 38)
             value = 38;
-
-        value = toTCCTemperature(that, value);
-        // TODO:
-        // verify that the task did succeed
 
         tcc.login(this.username, this.password, this.deviceID).then(function(session) {
             session.setHeatSetpoint(that.deviceID, value, minutes).then(function(taskId) {
