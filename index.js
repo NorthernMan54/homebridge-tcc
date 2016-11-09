@@ -542,6 +542,8 @@ tccThermostatAccessory.prototype = {
 
         // this.addOptionalCharacteristic(Characteristic.TargetRelativeHumidity);
         // this.addOptionalCharacteristic(Characteristic.CoolingThresholdTemperature);
+        if (this.device.latestData.uiData.SwitchAutoAllowed) {
+          // Only available on models with an Auto Mode
         this.thermostatService
             .getCharacteristic(Characteristic.CoolingThresholdTemperature)
             .on('get', this.getCoolingThresholdTemperature.bind(this));
@@ -550,7 +552,7 @@ tccThermostatAccessory.prototype = {
         this.thermostatService
             .getCharacteristic(Characteristic.HeatingThresholdTemperature)
             .on('get', this.getHeatingThresholdTemperature.bind(this));
-
+}
         // this.addOptionalCharacteristic(Characteristic.Name);
         this.thermostatService
             .getCharacteristic(Characteristic.Name)
