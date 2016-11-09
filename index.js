@@ -100,7 +100,7 @@ function updateValues(that) {
 
                     if (!deepEquals(device, myAccessories[i].device)) {
 
-                        that.log("Change ", diff( myAccessories[i].device,device));
+                        that.log("Change ", diff(myAccessories[i].device, device));
 
                         myAccessories[i].device = device;
 
@@ -543,16 +543,16 @@ tccThermostatAccessory.prototype = {
         // this.addOptionalCharacteristic(Characteristic.TargetRelativeHumidity);
         // this.addOptionalCharacteristic(Characteristic.CoolingThresholdTemperature);
         if (this.device.latestData.uiData.SwitchAutoAllowed) {
-          // Only available on models with an Auto Mode
-        this.thermostatService
-            .getCharacteristic(Characteristic.CoolingThresholdTemperature)
-            .on('get', this.getCoolingThresholdTemperature.bind(this));
+            // Only available on models with an Auto Mode 
+            this.thermostatService
+                .getCharacteristic(Characteristic.CoolingThresholdTemperature)
+                .on('get', this.getCoolingThresholdTemperature.bind(this));
 
-        // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
-        this.thermostatService
-            .getCharacteristic(Characteristic.HeatingThresholdTemperature)
-            .on('get', this.getHeatingThresholdTemperature.bind(this));
-}
+            // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
+            this.thermostatService
+                .getCharacteristic(Characteristic.HeatingThresholdTemperature)
+                .on('get', this.getHeatingThresholdTemperature.bind(this));
+        }
         // this.addOptionalCharacteristic(Characteristic.Name);
         this.thermostatService
             .getCharacteristic(Characteristic.Name)
