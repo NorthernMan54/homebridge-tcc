@@ -79,10 +79,15 @@ tccPlatform.prototype = {
 
 tccPlatform.prototype.periodicUpdate = function(t) {
     this.log("periodicUpdate");
-    if (!this.updating && myAccessories) {
-        this.updating = true;
+    var t = updateValues(this);
+}
 
-        session.CheckDataSession(this.deviceID).then(function(deviceData) {
+function updateValues(that) {
+    that.log("updateValues");
+    if (!that.updating && myAccessories) {
+        that.updating = true;
+
+        session.CheckDataSession(that.deviceID).then(function(deviceData) {
 
             for (var i = 0; i < myAccessories.length; ++i) {
 
@@ -90,61 +95,46 @@ tccPlatform.prototype.periodicUpdate = function(t) {
 
                 if (device) {
 
-                    if (this.debug)
-                        this.log("DEBUG ", device);
-                    // Check if temp has changed
-                    var oldCurrentTemp = myAccessories[i].device.latestData.uiData.DispTemperature;
-                    var oldTargetTemp = myAccessories[i].device.latestData.uiData.HeatSetpoint;
-                    var newCurrentTemp = device.latestData.uiData.DispTemperature;
-                    var newTargetTemp = device.latestData.uiData.HeatSetpoint;
+                    if (that.debug)
+                        that.log("DEBUG ", device);
 
-                    if (device.latestData.uiData.IndoorHumiditySensorAvailable &&
-                        device.latestData.uiData.IndoorHumiditySensorNotFault) {
-                        var oldCurrentRelativeHumidity = myAccessories[i].device.latestData.uiData.CurrentRelativeHumidity;
-                        var newCurrentRelativeHumidity = device.latestData.uiData.CurrentRelativeHumidity;
-                    }
+                    if (!deepEquals(device, myAccessories[i].device)) {
 
-                    var CurrentHeatingCoolingState = device.latestData.uiData.EquipmentOutputStatus;
-                    var oldCurrentHeatingCoolingState = myAccessories[i].device.latestData.uiData.EquipmentOutputStatus;
+                        that.log("Change ", diff( myAccessories[i].device,device));
 
-                    myAccessories[i].device = device;
+                        myAccessories[i].device = device;
 
-                    var service = myAccessories[i].thermostatService;
-
-                    if (oldCurrentTemp != newCurrentTemp && service) {
-                        this.log("Updating: " + device.latestData.uiData.DeviceID + " currentTempChange from: " + oldCurrentTemp + " to: " + newCurrentTemp);
-                        service.getCharacteristic(Characteristic.CurrentTemperature)
-                            .getValue();
-                    }
-
-                    if (CurrentHeatingCoolingState != oldCurrentHeatingCoolingState && service) {
-                        this.log("Updating: " + device.latestData.uiData.DeviceID + " HeatingCoolingState from: " + oldCurrentHeatingCoolingState + " to: " + CurrentHeatingCoolingState);
-                        service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
-                            .getValue();
-                    }
-
-                    if (oldTargetTemp != newTargetTemp && service) {
-                        this.log("Updating: " + device.latestData.uiData.DeviceID + " targetTempChange from: " + oldTargetTemp + " to: " + newTargetTemp);
+                        var service = myAccessories[i].thermostatService;
+                        // Something changed, update everything
+                        // works intermittently
                         service.getCharacteristic(Characteristic.TargetTemperature)
                             .getValue();
-                    }
-
-                    if (this.device.latestData.uiData.IndoorHumiditySensorAvailable && this.device.latestData.uiData.IndoorHumiditySensorNotFault && oldCurrentRelativeHumidity != newCurrentRelativeHumidity && service) {
-                        this.log("Updating: " + device.latestData.uiData.DeviceID + " CurrentRelativeHumidity from: " + oldCurrentRelativeHumidity + " to: " + newCurrentRelativeHumidity);
+                        service.getCharacteristic(Characteristic.CurrentTemperature)
+                            .getValue();
+                        service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
+                            .getValue();
+                        service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
+                            .getValue();
                         service.getCharacteristic(Characteristic.CurrentRelativeHumidity)
                             .getValue();
-                    }
+                        service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
+                            .getValue();
+                        service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
+                            .getValue();
 
+                    } else {
+                        that.log("No change");
+                    }
                 }
             }
-        }.bind(this)).fail(function(err) {
-            this.log('PU Failed:', err);
+        }.bind(that)).fail(function(err) {
+            that.log('PU Failed:', err);
         });
         //      }.bind(this)).fail(function(err) {
         //          this.log('PU Failed:', err);
         //      });
 
-        this.updating = false;
+        that.updating = false;
     }
 }
 
@@ -234,6 +224,34 @@ function toTCCHeadingCoolingSystem(heatingCoolingSystem) {
     }
 }
 
+function isEmptyObject(obj) {
+    var name;
+    for (name in obj) {
+        return false;
+    }
+    return true;
+};
+
+function diff(obj1, obj2) {
+    var result = {};
+    var change;
+    for (var key in obj1) {
+        if (typeof obj2[key] == 'object' && typeof obj1[key] == 'object') {
+            change = diff(obj1[key], obj2[key]);
+            if (isEmptyObject(change) === false) {
+                result[key] = change;
+            }
+        } else if (obj2[key] != obj1[key]) {
+            result[key] = obj2[key];
+        }
+    }
+    return result;
+};
+
+function deepEquals(o1, o2) {
+    return JSON.stringify(o1) === JSON.stringify(o2);
+}
+
 
 tccThermostatAccessory.prototype = {
 
@@ -285,8 +303,9 @@ tccThermostatAccessory.prototype = {
             session.setSystemSwitch(that.deviceID, toTCCHeadingCoolingSystem(value)).then(function(taskId) {
                 that.log("Successfully changed system!");
                 that.log(taskId);
-                // returns taskId if successful
-                // nothing else here...
+                // Update all information
+                // TODO: call periodicUpdate to refresh all data elements
+                var t = updateValues(that);
                 callback(null, Number(1));
             });
         }).fail(function(err) {
@@ -341,28 +360,31 @@ tccThermostatAccessory.prototype = {
         // TODO:
         // verify that the task did succeed
 
-        tcc.login(this.username, this.password, this.deviceID).then(function (session) {
+        tcc.login(this.username, this.password, this.deviceID).then(function(session) {
             var heatSetPoint, coolSetPoint = null;
             switch (toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
                 case 0:
                     break;
                 case 1:
                     heatSetPoint = value;
+                    break;
                 case 2:
                     coolSetPoint = value;
+                    break;
                 case 3:
                     if (value < that.device.latestData.uiData.HeatSetpoint)
-                        heatSetPoint = value
+                        heatSetPoint = value;
                     else if (value > that.device.latestData.uiData.CoolSetpoint)
-                        coolSetPoint = value
+                        coolSetPoint = value;
                     else if ((that.device.latestData.uiData.HeatSetpoint - value) < (value - that.device.latestData.uiData.CoolSetpoint))
-                        coolSetPoint = value
+                        coolSetPoint = value;
                     else
-                        heatSetPoint = value
+                        heatSetPoint = value;
+                    break;
                 default:
-                    break
+                    break;
             }
-            session.setHeatCoolSetpoint(that.deviceID, heatSetPoint, coolSetPoint).then(function (taskId) {
+            session.setHeatCoolSetpoint(that.deviceID, heatSetPoint, coolSetPoint).then(function(taskId) {
                 that.log("Successfully changed temperature!");
                 that.log(taskId);
                 // returns taskId if successful
@@ -384,7 +406,26 @@ tccThermostatAccessory.prototype = {
         // Homebridge expects temperatures in C, but Honeywell will return F if configured.
 
         if (this.model = "EMEA_ZONE") {
-            var targetTemperature = toHBTemperature(that, this.device.latestData.uiData.HeatSetpoint);
+            switch (toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
+                case 0:
+                    var targetTemperature = 10;
+                    break;
+                case 1:
+                    var targetTemperature = toHBTemperature(that, this.device.latestData.uiData.HeatSetpoint);
+                    break;
+                case 2:
+                    var targetTemperature = toHBTemperature(that, this.device.latestData.uiData.CoolSetpoint);
+                    break;
+                case 3:
+                    // Not sure what to do here, so will display 10
+                    var targetTemperature = 10;
+                    break;
+                default:
+                    // Not sure what to do here, so will display 10
+                    var targetTemperature = 10;
+                    break
+            }
+
             //        that.log("Device type is: " + this.model + ". Target temperature should be there.");
             that.log("Target temperature for", this.name, "is", targetTemperature + "°");
         } else {
@@ -422,7 +463,7 @@ tccThermostatAccessory.prototype = {
         callback(null, Number(temperatureUnits));
     },
 
-    getCoolingThresholdTemperature: function (callback) {
+    getCoolingThresholdTemperature: function(callback) {
         var that = this;
 
         var coolingthresholdTemperature = toHBTemperature(this, this.device.latestData.uiData.CoolSetpoint);
@@ -431,7 +472,7 @@ tccThermostatAccessory.prototype = {
         callback(null, Number(coolingthresholdTemperature));
     },
 
-    getHeatingThresholdTemperature: function (callback) {
+    getHeatingThresholdTemperature: function(callback) {
         var that = this;
 
         var heatingthresholdTemperature = toHBTemperature(this, this.device.latestData.uiData.HeatSetpoint);
