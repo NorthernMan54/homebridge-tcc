@@ -53,7 +53,7 @@ tccPlatform.prototype = {
             this.log("Logged into tcc!");
             session = login;
             session.CheckDataSession(that.deviceID).then(function(deviceData) {
-                //    console.log("DD -->", deviceData);
+    //                console.log("DD -->", deviceData);
 
                 var accessory = new tccThermostatAccessory(that.log, this.name,
                     deviceData, this.username, this.password, this.deviceID, this.debug);
@@ -86,22 +86,16 @@ function updateValues(that) {
     that.log("updateValues");
     if (!that.updating && myAccessories) {
         that.updating = true;
-
         session.CheckDataSession(that.deviceID).then(function(deviceData) {
-
             for (var i = 0; i < myAccessories.length; ++i) {
 
                 var device = deviceData;
-
                 if (device) {
-
                     if (that.debug)
                         that.log("DEBUG ", device);
-
                     if (!deepEquals(device, myAccessories[i].device)) {
 
                         that.log("Change ", diff(myAccessories[i].device, device));
-
                         myAccessories[i].device = device;
 
                         var service = myAccessories[i].thermostatService;
@@ -129,6 +123,14 @@ function updateValues(that) {
             }
         }.bind(that)).fail(function(err) {
             that.log('PU Failed:', err);
+            // Try logging in again
+            tcc.login(that.username, that.password, that.deviceID).then(function(login) {
+                this.log("Logged into tcc!");
+                session = login;
+            }.bind(this)).fail(function(err) {
+                // tell me if login did not work!
+                that.log("Error during Login:", err);
+            });
         });
         //      }.bind(this)).fail(function(err) {
         //          this.log('PU Failed:', err);
@@ -543,7 +545,7 @@ tccThermostatAccessory.prototype = {
         // this.addOptionalCharacteristic(Characteristic.TargetRelativeHumidity);
         // this.addOptionalCharacteristic(Characteristic.CoolingThresholdTemperature);
         if (this.device.latestData.uiData.SwitchAutoAllowed) {
-            // Only available on models with an Auto Mode 
+            // Only available on models with an Auto Mode
             this.thermostatService
                 .getCharacteristic(Characteristic.CoolingThresholdTemperature)
                 .on('get', this.getCoolingThresholdTemperature.bind(this));
