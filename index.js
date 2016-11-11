@@ -483,6 +483,44 @@ tccThermostatAccessory.prototype = {
         callback(null, Number(coolingthresholdTemperature));
     },
 
+    setCoolingThresholdTemperature: function (value, callback) {
+        var that = this;
+        if (!updating) {
+            updating = true;
+
+            //    maxValue: 38,
+            //    minValue: 10,
+
+            that.log("Setting cooling threshold target temperature for", this.name, "to", value + "°");
+            var minutes = 10; // The number of minutes the new target temperature will be effective
+
+            if (value < 10)
+                value = 10;
+
+            if (value > 38)
+                value = 38;
+
+            value = toTCCTemperature(that, value);
+            // TODO:
+            // verify that the task did succeed
+
+            tcc.login(this.username, this.password, this.deviceID).then(function (session) {
+                session.setHeatCoolSetpoint(that.deviceID, null, value).then(function (taskId) {
+                    that.log("Successfully changed cooling threshold!");
+                    that.log(taskId);
+                    // returns taskId if successful
+                    // nothing else here...
+                    callback(null, Number(1));
+                });
+            }).fail(function (err) {
+                that.log('tcc Failed:', err);
+                callback(null, Number(0));
+            });
+            callback(null, Number(0));
+            updating = false;
+        }
+    },
+
     getHeatingThresholdTemperature: function(callback) {
         var that = this;
 
@@ -490,6 +528,44 @@ tccThermostatAccessory.prototype = {
         that.log("Heat Setpoint temperature of " + this.name + " is " + heatingthresholdTemperature + "°");
 
         callback(null, Number(heatingthresholdTemperature));
+    },
+
+    setHeatingThresholdTemperature: function (value, callback) {
+        var that = this;
+        if (!updating) {
+            updating = true;
+
+            //    maxValue: 38,
+            //    minValue: 10,
+
+            that.log("Setting heating threshold target temperature for", this.name, "to", value + "°");
+            var minutes = 10; // The number of minutes the new target temperature will be effective
+
+            if (value < 10)
+                value = 10;
+
+            if (value > 38)
+                value = 38;
+
+            value = toTCCTemperature(that, value);
+            // TODO:
+            // verify that the task did succeed
+
+            tcc.login(this.username, this.password, this.deviceID).then(function (session) {
+                session.setHeatCoolSetpoint(that.deviceID, value, null).then(function (taskId) {
+                    that.log("Successfully changed heating threshold!");
+                    that.log(taskId);
+                    // returns taskId if successful
+                    // nothing else here...
+                    callback(null, Number(1));
+                });
+            }).fail(function (err) {
+                that.log('tcc Failed:', err);
+                callback(null, Number(0));
+            });
+            callback(null, Number(0));
+            updating = false;
+        }
     },
 
     setTemperatureDisplayUnits: function(value, callback) {
@@ -557,12 +633,14 @@ tccThermostatAccessory.prototype = {
             // Only available on models with an Auto Mode
             this.thermostatService
                 .getCharacteristic(Characteristic.CoolingThresholdTemperature)
-                .on('get', this.getCoolingThresholdTemperature.bind(this));
+                .on('get', this.getCoolingThresholdTemperature.bind(this))
+                .on('set', this.setCoolingThresholdTemperature.bind(this))
 
             // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
             this.thermostatService
                 .getCharacteristic(Characteristic.HeatingThresholdTemperature)
-                .on('get', this.getHeatingThresholdTemperature.bind(this));
+                .on('get', this.getHeatingThresholdTemperature.bind(this))
+                .on('set', this.setHeatingThresholdTemperature.bind(this));
         }
         // this.addOptionalCharacteristic(Characteristic.Name);
         this.thermostatService
