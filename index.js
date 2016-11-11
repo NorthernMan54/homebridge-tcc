@@ -491,7 +491,7 @@ tccThermostatAccessory.prototype = {
             //    maxValue: 38,
             //    minValue: 10,
 
-            that.log("Setting cooling threshold target temperature for", this.name, "to", value + "°");
+            that.log("Setting cooling threshold temperature for", this.name, "to", value + "°");
             var minutes = 10; // The number of minutes the new target temperature will be effective
 
             if (value < 10)
@@ -538,7 +538,7 @@ tccThermostatAccessory.prototype = {
             //    maxValue: 38,
             //    minValue: 10,
 
-            that.log("Setting heating threshold target temperature for", this.name, "to", value + "°");
+            that.log("Setting heating threshold temperature for", this.name, "to", value + "°");
             var minutes = 10; // The number of minutes the new target temperature will be effective
 
             if (value < 10)
