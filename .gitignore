@@ -27,3 +27,4 @@ build/Release
 node_modules
 therm.py
 lib/evohome.js
+publish.sh
