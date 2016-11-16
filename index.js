@@ -124,7 +124,7 @@ function updateValues(that) {
             that.log('PU Failed:', err);
             // Try logging in again
             tcc.login(that.username, that.password, that.deviceID).then(function(login) {
-                this.log("Logged into tcc!");
+                that.log("Logged into tcc!");
                 session = login;
             }.bind(this)).fail(function(err) {
                 // tell me if login did not work!
