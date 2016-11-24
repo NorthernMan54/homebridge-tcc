@@ -42,8 +42,7 @@ use full for debugging no response errors.
 
 # Roadmap
 
-- Wire up set target temp, and set heat/cool switch
-- Need recovery code for periodicUpdate to handle errors
+- Need to add throttling around temperature changes
 
 # Notes
 

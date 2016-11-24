@@ -48,6 +48,9 @@ tccPlatform.prototype = {
 
         var that = this;
 
+        tcc.setCharacteristic(Characteristic);
+        tcc.setDebug(this.debug);
+
         tcc.login(that.username, that.password, that.deviceID).then(function(login) {
             this.log("Logged into tcc!");
             session = login;
@@ -63,6 +66,10 @@ tccPlatform.prototype = {
 
                 callback(myAccessories);
 
+                var service = accessory.thermostatService;
+
+                updateStatus(service, deviceData);
+
                 setInterval(that.periodicUpdate.bind(this), this.cache_timeout * 1000);
 
             }.bind(this)).fail(function(err) {
@@ -75,6 +82,27 @@ tccPlatform.prototype = {
         });
     }
 };
+
+function updateStatus(service, data) {
+    service.getCharacteristic(Characteristic.TargetTemperature)
+        .getValue();
+    service.getCharacteristic(Characteristic.CurrentTemperature)
+        .getValue();
+    service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
+        .getValue();
+    service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
+        .getValue();
+    if (data.latestData.uiData.IndoorHumiditySensorAvailable && data.latestData.uiData.IndoorHumiditySensorNotFault)
+        service.getCharacteristic(Characteristic.CurrentRelativeHumidity)
+        .getValue();
+    if (data.latestData.uiData.SwitchAutoAllowed) {
+        service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
+            .getValue();
+        service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
+            .getValue();
+    }
+
+}
 
 tccPlatform.prototype.periodicUpdate = function(t) {
     this.log("periodicUpdate");
@@ -92,28 +120,12 @@ function updateValues(that) {
                 if (device) {
                     if (that.debug)
                         that.log("DEBUG ", device);
-                    if (!deepEquals(device, myAccessories[i].device)) {
+                    if (!tcc.deepEquals(device, myAccessories[i].device)) {
 
-                        that.log("Change ", diff(myAccessories[i].device, device));
+                        that.log("Change ", tcc.diff(myAccessories[i].device, device));
                         myAccessories[i].device = device;
 
-                        var service = myAccessories[i].thermostatService;
-                        // Something changed, update everything
-                        // works intermittently
-                        service.getCharacteristic(Characteristic.TargetTemperature)
-                            .getValue();
-                        service.getCharacteristic(Characteristic.CurrentTemperature)
-                            .getValue();
-                        service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
-                            .getValue();
-                        service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
-                            .getValue();
-                        service.getCharacteristic(Characteristic.CurrentRelativeHumidity)
-                            .getValue();
-                        service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
-                            .getValue();
-                        service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
-                            .getValue();
+                        updateStatus(myAccessories[i].thermostatService, device);
 
                     } else {
                         that.log("No change");
@@ -140,13 +152,10 @@ function updateValues(that) {
 }
 
 // give this function all the parameters needed
+
 function tccThermostatAccessory(log, name, deviceData, username, password, deviceID, debug) {
     this.name = name;
     this.device = deviceData;
-    //this.model = device.thermostatModelType;
-    //this.serial = device.deviceID;
-    //this.deviceId = deviceId;
-
     this.username = username;
     this.password = password;
     this.deviceID = deviceID;
@@ -154,105 +163,6 @@ function tccThermostatAccessory(log, name, deviceData, username, password, devic
 
     this.log = log;
 }
-
-function toTCCTemperature(that, temperature) {
-    switch (that.device.latestData.uiData.DisplayUnits) {
-        case "F":
-            return ((temperature * 9 / 5) + 32).toFixed(1);
-            break;
-        default:
-            return temperature;
-    }
-
-}
-
-function toHBTemperature(that, temperature) {
-    // homekit only deals with Celsius
-
-    switch (that.device.latestData.uiData.DisplayUnits) {
-        case "F":
-            return ((temperature - 32) * 5 / 9).toFixed(1);
-            break;
-        default:
-            return temperature;
-    }
-
-}
-
-function toHomeBridgeHeatingCoolingSystem(heatingCoolingSystem) {
-    switch (heatingCoolingSystem) {
-        case 1:
-            // heat
-            return Characteristic.TargetHeatingCoolingState.HEAT;
-            break;
-        case 2:
-            // off
-            return Characteristic.TargetHeatingCoolingState.OFF;
-            break;
-        case 3:
-            // cool
-            return Characteristic.TargetHeatingCoolingState.COOL;
-            break;
-        case 4:
-            // auto
-            return Characteristic.TargetHeatingCoolingState.AUTO;
-            break;
-        default:
-            return Characteristic.TargetHeatingCoolingState.OFF;
-    }
-}
-
-function toTCCHeadingCoolingSystem(heatingCoolingSystem) {
-    switch (heatingCoolingSystem) {
-        case Characteristic.TargetHeatingCoolingState.OFF:
-            // off
-            return 2;
-            break;
-        case Characteristic.TargetHeatingCoolingState.HEAT:
-            // heat
-            return 1
-            break;
-        case Characteristic.TargetHeatingCoolingState.COOL:
-            // cool
-            return 3
-            break;
-        case Characteristic.TargetHeatingCoolingState.AUTO:
-            // auto
-            return 4
-            break;
-        default:
-            return 0;
-    }
-}
-
-function isEmptyObject(obj) {
-    var name;
-    for (name in obj) {
-        return false;
-    }
-    return true;
-};
-
-function diff(obj1, obj2) {
-    var result = {};
-    var change;
-    for (var key in obj1) {
-        if (typeof obj2[key] == 'object' && typeof obj1[key] == 'object') {
-            change = diff(obj1[key], obj2[key]);
-            if (isEmptyObject(change) === false) {
-                result[key] = change;
-            }
-        } else if (obj2[key] != obj1[key]) {
-            result[key] = obj2[key];
-        }
-    }
-    return result;
-};
-
-function deepEquals(o1, o2) {
-    return JSON.stringify(o1) === JSON.stringify(o2);
-}
-
 
 tccThermostatAccessory.prototype = {
 
@@ -304,12 +214,12 @@ tccThermostatAccessory.prototype = {
             // verify that the task did succeed
 
             tcc.login(this.username, this.password, this.deviceID).then(function(session) {
-                session.setSystemSwitch(that.deviceID, toTCCHeadingCoolingSystem(value)).then(function(taskId) {
+                session.setSystemSwitch(that.deviceID, tcc.toTCCHeadingCoolingSystem(value)).then(function(taskId) {
                     that.log("Successfully changed system!");
                     that.log(taskId);
                     // Update all information
                     // TODO: call periodicUpdate to refresh all data elements
-                    var t = updateValues(that);
+                    updateValues(that);
                     callback(null, Number(1));
                 });
             }).fail(function(err) {
@@ -331,7 +241,7 @@ tccThermostatAccessory.prototype = {
         // COOL = 2
         // AUTO = 3
 
-        var TargetHeatingCooling = toHomeBridgeHeatingCoolingSystem(this.device.latestData.uiData.SystemSwitchPosition);
+        var TargetHeatingCooling = tcc.toHomeBridgeHeatingCoolingSystem(this.device.latestData.uiData.SystemSwitchPosition);
 
         this.log("getTargetHeatingCooling is ", TargetHeatingCooling);
 
@@ -342,7 +252,7 @@ tccThermostatAccessory.prototype = {
     getCurrentTemperature: function(callback) {
         var that = this;
 
-        var currentTemperature = toHBTemperature(this, this.device.latestData.uiData.DispTemperature);
+        var currentTemperature = tcc.toHBTemperature(this, this.device.latestData.uiData.DispTemperature);
         that.log("Current temperature of " + this.name + " is " + currentTemperature + "°");
 
         callback(null, Number(currentTemperature));
@@ -357,7 +267,6 @@ tccThermostatAccessory.prototype = {
             //    minValue: 10,
 
             that.log("Setting target temperature for", this.name, "to", value + "°");
-            var minutes = 10; // The number of minutes the new target temperature will be effective
 
             if (value < 10)
                 value = 10;
@@ -365,13 +274,13 @@ tccThermostatAccessory.prototype = {
             if (value > 38)
                 value = 38;
 
-            value = toTCCTemperature(that, value);
+            value = tcc.toTCCTemperature(that, value);
             // TODO:
             // verify that the task did succeed
 
             tcc.login(this.username, this.password, this.deviceID).then(function(session) {
                 var heatSetPoint, coolSetPoint = null;
-                switch (toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
+                switch (tcc.toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
                     case 0:
                         break;
                     case 1:
@@ -398,6 +307,7 @@ tccThermostatAccessory.prototype = {
                     that.log(taskId);
                     // returns taskId if successful
                     // nothing else here...
+                    updateValues(that);
                     callback(null, Number(1));
                 });
             }).fail(function(err) {
@@ -417,15 +327,15 @@ tccThermostatAccessory.prototype = {
         // Homebridge expects temperatures in C, but Honeywell will return F if configured.
 
         if (this.model = "EMEA_ZONE") {
-            switch (toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
+            switch (tcc.toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
                 case 0:
                     var targetTemperature = 10;
                     break;
                 case 1:
-                    var targetTemperature = toHBTemperature(that, this.device.latestData.uiData.HeatSetpoint);
+                    var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.HeatSetpoint);
                     break;
                 case 2:
-                    var targetTemperature = toHBTemperature(that, this.device.latestData.uiData.CoolSetpoint);
+                    var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.CoolSetpoint);
                     break;
                 case 3:
                     // Not sure what to do here, so will display 10
@@ -477,13 +387,13 @@ tccThermostatAccessory.prototype = {
     getCoolingThresholdTemperature: function(callback) {
         var that = this;
 
-        var coolingthresholdTemperature = toHBTemperature(this, this.device.latestData.uiData.CoolSetpoint);
+        var coolingthresholdTemperature = tcc.toHBTemperature(this, this.device.latestData.uiData.CoolSetpoint);
         that.log("Cool Setpoint temperature of " + this.name + " is " + coolingthresholdTemperature + "°");
 
         callback(null, Number(coolingthresholdTemperature));
     },
 
-    setCoolingThresholdTemperature: function (value, callback) {
+    setCoolingThresholdTemperature: function(value, callback) {
         var that = this;
         if (!updating) {
             updating = true;
@@ -492,7 +402,7 @@ tccThermostatAccessory.prototype = {
             //    minValue: 10,
 
             that.log("Setting cooling threshold temperature for", this.name, "to", value + "°");
-            var minutes = 10; // The number of minutes the new target temperature will be effective
+
 
             if (value < 10)
                 value = 10;
@@ -500,19 +410,20 @@ tccThermostatAccessory.prototype = {
             if (value > 38)
                 value = 38;
 
-            value = toTCCTemperature(that, value);
+            value = tcc.toTCCTemperature(that, value);
             // TODO:
             // verify that the task did succeed
 
-            tcc.login(this.username, this.password, this.deviceID).then(function (session) {
-                session.setHeatCoolSetpoint(that.deviceID, null, value).then(function (taskId) {
+            tcc.login(this.username, this.password, this.deviceID).then(function(session) {
+                session.setHeatCoolSetpoint(that.deviceID, null, value).then(function(taskId) {
                     that.log("Successfully changed cooling threshold!");
                     that.log(taskId);
                     // returns taskId if successful
                     // nothing else here...
+                    updateValues(that);
                     callback(null, Number(1));
                 });
-            }).fail(function (err) {
+            }).fail(function(err) {
                 that.log('tcc Failed:', err);
                 callback(null, Number(0));
             });
@@ -524,13 +435,13 @@ tccThermostatAccessory.prototype = {
     getHeatingThresholdTemperature: function(callback) {
         var that = this;
 
-        var heatingthresholdTemperature = toHBTemperature(this, this.device.latestData.uiData.HeatSetpoint);
+        var heatingthresholdTemperature = tcc.toHBTemperature(this, this.device.latestData.uiData.HeatSetpoint);
         that.log("Heat Setpoint temperature of " + this.name + " is " + heatingthresholdTemperature + "°");
 
         callback(null, Number(heatingthresholdTemperature));
     },
 
-    setHeatingThresholdTemperature: function (value, callback) {
+    setHeatingThresholdTemperature: function(value, callback) {
         var that = this;
         if (!updating) {
             updating = true;
@@ -539,7 +450,7 @@ tccThermostatAccessory.prototype = {
             //    minValue: 10,
 
             that.log("Setting heating threshold temperature for", this.name, "to", value + "°");
-            var minutes = 10; // The number of minutes the new target temperature will be effective
+
 
             if (value < 10)
                 value = 10;
@@ -547,19 +458,20 @@ tccThermostatAccessory.prototype = {
             if (value > 38)
                 value = 38;
 
-            value = toTCCTemperature(that, value);
+            value = tcc.toTCCTemperature(that, value);
             // TODO:
             // verify that the task did succeed
 
-            tcc.login(this.username, this.password, this.deviceID).then(function (session) {
-                session.setHeatCoolSetpoint(that.deviceID, value, null).then(function (taskId) {
+            tcc.login(this.username, this.password, this.deviceID).then(function(session) {
+                session.setHeatCoolSetpoint(that.deviceID, value, null).then(function(taskId) {
                     that.log("Successfully changed heating threshold!");
                     that.log(taskId);
                     // returns taskId if successful
                     // nothing else here...
+                    updateValues(that);
                     callback(null, Number(1));
                 });
-            }).fail(function (err) {
+            }).fail(function(err) {
                 that.log('tcc Failed:', err);
                 callback(null, Number(0));
             });
