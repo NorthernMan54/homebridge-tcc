@@ -78,6 +78,7 @@ tccPlatform.prototype = {
             })
 
             // Need to wait for all devices to be configured
+
             Promise.all(requests).then(() => {
                 callback(myAccessories);
                 that.periodicUpdate();
