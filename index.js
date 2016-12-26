@@ -5,14 +5,19 @@
 // The configuration is stored inside the ../config.json
 // {
 //     "platform": "tcc",
-//     "name" : "tcc",
+//     "name":     "Thermostat",
 //     "username" : "username/email",
 //     "password" : "password",
-//     "deviceID" : "123456789"
+//     "debug" : "True",      - Optional
+//     "refresh": "60",       - Optional
+//     "devices" : [
+//        { "deviceID": "123456789", "name" : "Main Floor Thermostat" },
+//        { "deviceID": "123456789", "name" : "Upper Floor Thermostat" }
+//     ]
 // }
 //
 
-
+/*jslint node: true */
 'use strict';
 
 var tcc = require('./lib/tcc.js');
@@ -33,11 +38,10 @@ function tccPlatform(log, config) {
 
     this.username = config['username'];
     this.password = config['password'];
-    this.name = config['name'];
-    this.deviceID = config['deviceID'];
+    this.refresh = config['refresh'] || 60; // Update every minute
     this.debug = config['debug'] || false;
-    this.cache_timeout = 60; // seconds
     this.log = log;
+    this.devices = config['devices'];
 
     updating = false;
 }
@@ -45,40 +49,47 @@ function tccPlatform(log, config) {
 tccPlatform.prototype = {
     accessories: function(callback) {
         this.log("Logging into tcc...");
-
         var that = this;
 
         tcc.setCharacteristic(Characteristic);
         tcc.setDebug(this.debug);
 
-        tcc.login(that.username, that.password, that.deviceID).then(function(login) {
-            this.log("Logged into tcc!");
+        tcc.login(that.username, that.password).then(function(login) {
+            this.log("Logged into tcc!", this.devices);
             session = login;
-            session.CheckDataSession(that.deviceID).then(function(deviceData) {
-                //                console.log("DD -->", deviceData);
 
-                var accessory = new tccThermostatAccessory(that.log, this.name,
-                    deviceData, this.username, this.password, this.deviceID, this.debug);
-                // store accessory in myAccessories
-                myAccessories.push(accessory);
+            let requests = this.devices.map((device) => {
+                return new Promise((resolve) => {
 
-                this.log("Added accessory!");
+                    session.CheckDataSession(device.deviceID,
+                        function(err, deviceData) {
+                            if (err) {
+                                that.log("Create Device Error", err);
+                                resolve();
+                            } else {
+                                var accessory = new tccAccessory(that.log, device.name,
+                                    deviceData, that.username, that.password, device.deviceID, that.debug);
+                                // store accessory in myAccessories
+                                myAccessories.push(accessory);
+                                resolve();
+                            }
+                        });
+                });
+            })
 
+            // Need to wait for all devices to be configured
+            Promise.all(requests).then(() => {
                 callback(myAccessories);
+                that.periodicUpdate();
+                setInterval(that.periodicUpdate.bind(this), this.refresh * 1000);
 
-                var service = accessory.thermostatService;
-
-                updateStatus(service, deviceData);
-
-                setInterval(that.periodicUpdate.bind(this), this.cache_timeout * 1000);
-
-            }.bind(this)).fail(function(err) {
-                this.log('tcc Failed:', err);
             });
 
+            // End of login section
         }.bind(this)).fail(function(err) {
             // tell me if login did not work!
             that.log("Error during Login:", err);
+            callback(err);
         });
     }
 };
@@ -110,61 +121,52 @@ tccPlatform.prototype.periodicUpdate = function(t) {
 }
 
 function updateValues(that) {
-    that.log("updateValues");
-    if (!updating && myAccessories) {
-        updating = true;
-        session.CheckDataSession(that.deviceID).then(function(deviceData) {
-            for (var i = 0; i < myAccessories.length; ++i) {
+    that.log("updateValues", myAccessories.length);
+    myAccessories.forEach(function(accessory) {
 
-                var device = deviceData;
-                if (device) {
-                    if (that.debug)
-                        that.log("DEBUG ", device);
-                    if (!tcc.deepEquals(device, myAccessories[i].device)) {
+        session.CheckDataSession(accessory.deviceID, function(err, deviceData) {
+            if (err) {
+                that.log("ERROR: UpdateValues",accessory.name,err);
+//                accessory.updateReachability(false);
+                tcc.login(that.username, that.password).then(function(login) {
+                    that.log("Logged into tcc!");
+                    session = login;
+                }.bind(this)).fail(function(err) {
+                    // tell me if login did not work!
+                    that.log("Error during Login:", err);
+                });
+            } else {
+                if (that.debug)
+                    that.log("Update Values", accessory.name);
+                if (!tcc.deepEquals(deviceData, accessory.device)) {
+                    that.log("Change", accessory.name,tcc.diff(accessory.device, deviceData));
+                    accessory.device = deviceData;
+                    updateStatus(accessory.thermostatService, deviceData);
+//                    accessory.updateReachability(true);
 
-                        that.log("Change ", tcc.diff(myAccessories[i].device, device));
-                        myAccessories[i].device = device;
-
-                        updateStatus(myAccessories[i].thermostatService, device);
-
-                    } else {
-                        that.log("No change");
-                    }
+                } else {
+                    that.log("No change",accessory.name);
                 }
             }
-        }.bind(that)).fail(function(err) {
-            that.log('PU Failed:', err);
-            // Try logging in again
-            tcc.login(that.username, that.password, that.deviceID).then(function(login) {
-                that.log("Logged into tcc!");
-                session = login;
-            }.bind(this)).fail(function(err) {
-                // tell me if login did not work!
-                that.log("Error during Login:", err);
-            });
         });
-        //      }.bind(this)).fail(function(err) {
-        //          this.log('PU Failed:', err);
-        //      });
-
-        updating = false;
-    }
+    });
 }
 
 // give this function all the parameters needed
 
-function tccThermostatAccessory(log, name, deviceData, username, password, deviceID, debug) {
+function tccAccessory(log, name, deviceData, username, password, deviceID, debug) {
+    this.log = log;
+    this.log("Adding TCC Device", name, deviceID);
     this.name = name;
     this.device = deviceData;
+    this.device.deviceLive = "false";
     this.username = username;
     this.password = password;
     this.deviceID = deviceID;
     this.debug = debug;
-
-    this.log = log;
 }
 
-tccThermostatAccessory.prototype = {
+tccAccessory.prototype = {
 
     getName: function(callback) {
 
@@ -213,7 +215,7 @@ tccThermostatAccessory.prototype = {
             // TODO:
             // verify that the task did succeed
 
-            tcc.login(this.username, this.password, this.deviceID).then(function(session) {
+            tcc.login(this.username, this.password).then(function(session) {
                 session.setSystemSwitch(that.deviceID, tcc.toTCCHeadingCoolingSystem(value)).then(function(taskId) {
                     that.log("Successfully changed system!");
                     that.log(taskId);
@@ -278,7 +280,7 @@ tccThermostatAccessory.prototype = {
             // TODO:
             // verify that the task did succeed
 
-            tcc.login(this.username, this.password, this.deviceID).then(function(session) {
+            tcc.login(this.username, this.password).then(function(session) {
                 var heatSetPoint, coolSetPoint = null;
                 switch (tcc.toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
                     case 0:
@@ -414,7 +416,7 @@ tccThermostatAccessory.prototype = {
             // TODO:
             // verify that the task did succeed
 
-            tcc.login(this.username, this.password, this.deviceID).then(function(session) {
+            tcc.login(this.username, this.password).then(function(session) {
                 session.setHeatCoolSetpoint(that.deviceID, null, value).then(function(taskId) {
                     that.log("Successfully changed cooling threshold!");
                     that.log(taskId);
@@ -462,7 +464,7 @@ tccThermostatAccessory.prototype = {
             // TODO:
             // verify that the task did succeed
 
-            tcc.login(this.username, this.password, this.deviceID).then(function(session) {
+            tcc.login(this.username, this.password).then(function(session) {
                 session.setHeatCoolSetpoint(that.deviceID, value, null).then(function(taskId) {
                     that.log("Successfully changed heating threshold!");
                     that.log(taskId);
@@ -489,7 +491,7 @@ tccThermostatAccessory.prototype = {
 
     getServices: function() {
         var that = this;
-        that.log("getServices");
+        that.log("getServices", this.name);
         // Information Service
         var informationService = new Service.AccessoryInformation();
 

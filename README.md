@@ -6,6 +6,7 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
 # Devices Tested With
 
 * RTH8580WF
+* RTH9580
 
 # Installation
 
@@ -22,7 +23,10 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
             "name" : "Thermostat",
             "username" : ".....",
             "password" : ".....",
-            "deviceID" : "...."
+            "devices" : [
+                  {"deviceID": "1234567","name": "Other Floor"},
+                  {"deviceID": "abcdefg","name": "Main Floor"}
+          	]
         },
     ]
 ```
@@ -39,6 +43,7 @@ https://mytotalconnectcomfort.com/portal/Device/Control/1234567
 The last part is your Device ID.
 - debug: optional parameter, will return details in log around response from TCC,
 use full for debugging no response errors.
+- refresh: How often the data is refreshed from the TCC website, in seconds.  Defaults to 60
 
 # Roadmap
 
@@ -53,3 +58,4 @@ It seems to be vitally important to set the right system time, especially on ras
 - luc-ass - Borrowed your homebridge-evohome plugin as a base to start from
 - Dan / Ghostbit - Borrowed your python script for the page flow of the TCC website
 - bwdeleeuw - Fahrenheit testing and other enhancements
+- devbymike - Validation of RTH9580
