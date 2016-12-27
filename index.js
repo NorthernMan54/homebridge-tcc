@@ -21,20 +21,23 @@
 'use strict';
 
 var tcc = require('./lib/tcc.js');
-var Service, Characteristic;
-var config;
+var Accessory, Service, Characteristic, UUIDGen, CommunityTypes;
+
 var myAccessories = [];
 var session; // reuse the same login session
 var updating; // Only one change at a time!!!!
 
 module.exports = function(homebridge) {
+
+    Accessory = homebridge.platformAccessory;
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
+    UUIDGen = homebridge.hap.uuid;
 
     homebridge.registerPlatform("homebridge-tcc", "tcc", tccPlatform);
 }
 
-function tccPlatform(log, config) {
+function tccPlatform(log, config, api) {
 
     this.username = config['username'];
     this.password = config['password'];
@@ -67,10 +70,11 @@ tccPlatform.prototype = {
                                 that.log("Create Device Error", err);
                                 resolve();
                             } else {
-                                var accessory = new tccAccessory(that.log, device.name,
+
+                                var newAccessory = new tccAccessory(that.log, device.name,
                                     deviceData, that.username, that.password, device.deviceID, that.debug);
                                 // store accessory in myAccessories
-                                myAccessories.push(accessory);
+                                myAccessories.push(newAccessory);
                                 resolve();
                             }
                         });
@@ -127,8 +131,9 @@ function updateValues(that) {
 
         session.CheckDataSession(accessory.deviceID, function(err, deviceData) {
             if (err) {
-                that.log("ERROR: UpdateValues",accessory.name,err);
-//                accessory.updateReachability(false);
+                that.log("ERROR: UpdateValues", accessory.name, err);
+                that.log("updateValues: Device not reachable", accessory.name);
+                accessory.newAccessory.updateReachability(false);
                 tcc.login(that.username, that.password).then(function(login) {
                     that.log("Logged into tcc!");
                     session = login;
@@ -138,15 +143,24 @@ function updateValues(that) {
                 });
             } else {
                 if (that.debug)
-                    that.log("Update Values", accessory.name);
+                    that.log("Update Values", accessory.name, deviceData);
+                // Data is live
+
+                if (deviceData.deviceLive) {
+                    //                    that.log("updateValues: Device reachable", accessory.name);
+                    accessory.newAccessory.updateReachability(true);
+                } else {
+                    that.log("updateValues: Device not reachable", accessory.name);
+                    accessory.newAccessory.updateReachability(false);
+                }
+
                 if (!tcc.deepEquals(deviceData, accessory.device)) {
-                    that.log("Change", accessory.name,tcc.diff(accessory.device, deviceData));
+                    that.log("Change", accessory.name, tcc.diff(accessory.device, deviceData));
                     accessory.device = deviceData;
                     updateStatus(accessory.thermostatService, deviceData);
-//                    accessory.updateReachability(true);
 
                 } else {
-                    that.log("No change",accessory.name);
+                    that.log("No change", accessory.name);
                 }
             }
         });
@@ -156,6 +170,13 @@ function updateValues(that) {
 // give this function all the parameters needed
 
 function tccAccessory(log, name, deviceData, username, password, deviceID, debug) {
+
+    var uuid = UUIDGen.generate(name);
+
+    this.newAccessory = new Accessory(name, uuid);
+
+    //    newAccessory.name = name;
+
     this.log = log;
     this.log("Adding TCC Device", name, deviceID);
     this.name = name;
@@ -165,6 +186,8 @@ function tccAccessory(log, name, deviceData, username, password, deviceID, debug
     this.password = password;
     this.deviceID = deviceID;
     this.debug = debug;
+
+    //    return newAccessory;
 }
 
 tccAccessory.prototype = {
@@ -181,6 +204,8 @@ tccAccessory.prototype = {
         var that = this;
 
         var currentRelativeHumidity = this.device.latestData.uiData.IndoorHumidity;
+
+
         callback(null, Number(currentRelativeHumidity));
         that.log("Current relative humidity of " + this.name + " is " + currentRelativeHumidity + "%");
     },
@@ -197,11 +222,16 @@ tccAccessory.prototype = {
         // when running in cool mode
 
         var CurrentHeatingCoolingState = this.device.latestData.uiData.EquipmentOutputStatus;
-        that.log("getCurrentHeatingCoolingState is ", CurrentHeatingCoolingState);
+        that.log("getCurrentHeatingCoolingState is", CurrentHeatingCoolingState, this.name);
         if (CurrentHeatingCoolingState > 2)
         // Maximum value is 2
             CurrentHeatingCoolingState = 2;
-        callback(null, Number(CurrentHeatingCoolingState));
+        if (this.newAccessory.reachable) {
+            callback(null, Number(CurrentHeatingCoolingState));
+        } else {
+            that.log("getCurrentHeatingCoolingState: Device not reachable");
+            callback(new Error("Device not reachable"));
+        }
     },
 
     // This is to change the system switch to a different position
@@ -210,7 +240,6 @@ tccAccessory.prototype = {
         var that = this;
         if (!updating) {
             updating = true;
-
 
             that.log("Setting system switch for", this.name, "to", value);
             // TODO:
@@ -513,19 +542,40 @@ tccAccessory.prototype = {
             .on('get', this.getCurrentHeatingCoolingState.bind(this));
 
         // this.addCharacteristic(Characteristic.TargetHeatingCoolingState); READ WRITE
-        this.thermostatService
-            .getCharacteristic(Characteristic.TargetHeatingCoolingState)
-            .on('get', this.getTargetHeatingCooling.bind(this))
-            .on('set', this.setTargetHeatingCooling.bind(this));
+
+        if (this.device.latestData.uiData.SwitchAutoAllowed) {
+            this.thermostatService
+                .getCharacteristic(Characteristic.TargetHeatingCoolingState)
+                .on('get', this.getTargetHeatingCooling.bind(this))
+                .on('set', this.setTargetHeatingCooling.bind(this));
+        } else {
+            // don't display Auto if it isn't supported
+            this.thermostatService
+                .getCharacteristic(Characteristic.TargetHeatingCoolingState)
+                .setProps({
+                    validValues: [0, 1, 2]
+                })
+                .on('get', this.getTargetHeatingCooling.bind(this))
+                .on('set', this.setTargetHeatingCooling.bind(this));
+        }
+
+
 
         // this.addCharacteristic(Characteristic.CurrentTemperature); READ
         this.thermostatService
             .getCharacteristic(Characteristic.CurrentTemperature)
+            .setProps({
+                minValue: -100,
+                maxValue: 100
+            })
             .on('get', this.getCurrentTemperature.bind(this));
 
         // this.addCharacteristic(Characteristic.TargetTemperature); READ WRITE
         this.thermostatService
             .getCharacteristic(Characteristic.TargetTemperature)
+            .setProps({
+                minStep: 0.5
+            })
             .on('get', this.getTargetTemperature.bind(this))
             .on('set', this.setTargetTemperature.bind(this));
 
