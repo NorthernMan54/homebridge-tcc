@@ -310,43 +310,45 @@ tccAccessory.prototype = {
             // TODO:
             // verify that the task did succeed
 
-            tcc.login(this.username, this.password).then(function(session) {
-                var heatSetPoint, coolSetPoint = null;
-                switch (tcc.toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
-                    case 0:
-                        break;
-                    case 1:
+            //            tcc.login(this.username, this.password).then(function(session) {
+            var heatSetPoint, coolSetPoint = null;
+            switch (tcc.toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
+                case 0:
+                    break;
+                case 1:
+                    heatSetPoint = value;
+                    break;
+                case 2:
+                    coolSetPoint = value;
+                    break;
+                case 3:
+                    if (value < that.device.latestData.uiData.HeatSetpoint)
                         heatSetPoint = value;
-                        break;
-                    case 2:
+                    else if (value > that.device.latestData.uiData.CoolSetpoint)
                         coolSetPoint = value;
-                        break;
-                    case 3:
-                        if (value < that.device.latestData.uiData.HeatSetpoint)
-                            heatSetPoint = value;
-                        else if (value > that.device.latestData.uiData.CoolSetpoint)
-                            coolSetPoint = value;
-                        else if ((that.device.latestData.uiData.HeatSetpoint - value) < (value - that.device.latestData.uiData.CoolSetpoint))
-                            coolSetPoint = value;
-                        else
-                            heatSetPoint = value;
-                        break;
-                    default:
-                        break;
+                    else if ((that.device.latestData.uiData.HeatSetpoint - value) < (value - that.device.latestData.uiData.CoolSetpoint))
+                        coolSetPoint = value;
+                    else
+                        heatSetPoint = value;
+                    break;
+                default:
+                    break;
+            }
+            session.setHeatCoolSetpoint(that.deviceID, heatSetPoint, coolSetPoint).then(function(taskId) {
+                that.log("Successfully changed temperature!", taskId);
+                if ( taskId.success )
+                {
+                  that.log("Successfully changed temperature!", taskId);
+                  callback();
+                } else {
+                  that.log("Error: Unsuccessfully changed temperature!", taskId);
+                  callback(new Error("Error: setHeatCoolSetpoint"));
                 }
-                session.setHeatCoolSetpoint(that.deviceID, heatSetPoint, coolSetPoint).then(function(taskId) {
-                    that.log("Successfully changed temperature!");
-                    that.log(taskId);
-                    // returns taskId if successful
-                    // nothing else here...
-                    updateValues(that);
-                    callback(null, Number(1));
-                });
-            }).fail(function(err) {
-                that.log('tcc Failed:', err);
-                callback(null, Number(0));
+                updateValues(that); // refresh
+            }.bind(this)).fail(function(err) {
+                that.log('Error: setHeatCoolSetpoint', err);
+                callback(err);
             });
-            callback(null, Number(0));
             updating = false;
         }
     },
