@@ -334,6 +334,7 @@ tccAccessory.prototype = {
                 default:
                     break;
             }
+            that.log("setHeatCoolSetpoint",that.name,that.device.latestData.uiData.StatusHeat,that.device.latestData.uiData.StatusCool);
             session.setHeatCoolSetpoint(that.deviceID, heatSetPoint, coolSetPoint).then(function(taskId) {
                 that.log("Successfully changed temperature!", that.name,taskId);
                 if ( taskId.success )
