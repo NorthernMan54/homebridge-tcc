@@ -275,7 +275,7 @@ tccAccessory.prototype = {
 
         var TargetHeatingCooling = tcc.toHomeBridgeHeatingCoolingSystem(this.device.latestData.uiData.SystemSwitchPosition);
 
-        this.log("getTargetHeatingCooling is ", TargetHeatingCooling);
+        this.log("getTargetHeatingCooling is ", TargetHeatingCooling,this.name);
 
         callback(null, Number(TargetHeatingCooling));
 
@@ -335,18 +335,18 @@ tccAccessory.prototype = {
                     break;
             }
             session.setHeatCoolSetpoint(that.deviceID, heatSetPoint, coolSetPoint).then(function(taskId) {
-                that.log("Successfully changed temperature!", taskId);
+                that.log("Successfully changed temperature!", that.name,taskId);
                 if ( taskId.success )
                 {
                   that.log("Successfully changed temperature!", taskId);
                   callback();
                 } else {
-                  that.log("Error: Unsuccessfully changed temperature!", taskId);
+                  that.log("Error: Unsuccessfully changed temperature!", that.name,taskId);
                   callback(new Error("Error: setHeatCoolSetpoint"));
                 }
                 updateValues(that); // refresh
             }.bind(this)).fail(function(err) {
-                that.log('Error: setHeatCoolSetpoint', err);
+                that.log('Error: setHeatCoolSetpoint', that.name,err);
                 callback(err);
             });
             updating = false;
@@ -401,7 +401,7 @@ tccAccessory.prototype = {
     getTemperatureDisplayUnits: function(callback) {
         var that = this;
         var temperatureUnits = 0;
-        that.log("getTemperatureDisplayUnits");
+        that.log("getTemperatureDisplayUnits",this.name);
         switch (this.device.latestData.uiData.DisplayUnits) {
             case "F":
                 that.log("Temperature unit for", this.name, "is set to", this.device.latestData.uiData.DisplayUnits);
