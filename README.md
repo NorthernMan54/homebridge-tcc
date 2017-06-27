@@ -1,12 +1,14 @@
 # homebridge-tcc
 
-This is a plugin for Honeywell Total Connect Comfort. It is a partially-working
-implementation into HomeKit. This plugin is work in progress. Help is appreciated!
+This is a plugin for North America Honeywell Total Connect Comfort site. It is a partially-working
+implementation into HomeKit. This plugin is work in progress. Help is appreciated!  Please note it does not work with the International Honeywell Total Connect Comfort site.
 
 # Devices Tested With
 
 * RTH8580WF
 * RTH9580
+
+* This plugin not work with the international
 
 # Installation
 
