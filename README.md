@@ -1,5 +1,7 @@
 # homebridge-tcc
 
+[![NPM Downloads](https://img.shields.io/npm/dm/homebridge-dht.svg?style=flat)](https://npmjs.org/package/homebridge-tcc)
+
 This is a plugin for North America Honeywell Total Connect Comfort site. It is a partially-working
 implementation into HomeKit. This plugin is work in progress. Help is appreciated!  Please note it does not work with the International Honeywell Total Connect Comfort site.
 
