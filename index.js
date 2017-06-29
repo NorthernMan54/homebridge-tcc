@@ -363,22 +363,23 @@ tccAccessory.prototype = {
 
         if (this.model = "EMEA_ZONE") {
             switch (tcc.toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
-                case 0:
-                    var targetTemperature = 10;
+                case Characteristic.TargetHeatingCoolingState.OFF:
+                    // Not sure what to do here, so will display current temperature
+                    var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.DispTemperature);
                     break;
-                case 1:
+                case Characteristic.TargetHeatingCoolingState.HEAT:
                     var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.HeatSetpoint);
                     break;
-                case 2:
+                case Characteristic.TargetHeatingCoolingState.COOL:
                     var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.CoolSetpoint);
                     break;
-                case 3:
-                    // Not sure what to do here, so will display 10
-                    var targetTemperature = 10;
+                case Characteristic.TargetHeatingCoolingState.AUTO:
+                    // Not sure what to do here, so will display current temperature
+                    var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.DispTemperature);
                     break;
                 default:
-                    // Not sure what to do here, so will display 10
-                    var targetTemperature = 10;
+                    // Not sure what to do here, so will display current temperature
+                    var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.DispTemperature);
                     break
             }
 
