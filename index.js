@@ -133,7 +133,7 @@ function updateValues(that) {
             if (err) {
                 that.log("ERROR: UpdateValues", accessory.name, err);
                 that.log("updateValues: Device not reachable", accessory.name);
-                accessory.newAccessory.updateReachability(false);
+//                accessory.newAccessory.updateReachability(false);
                 tcc.login(that.username, that.password).then(function(login) {
                     that.log("Logged into tcc!");
                     session = login;
@@ -148,10 +148,10 @@ function updateValues(that) {
 
                 if (deviceData.deviceLive) {
                     //                    that.log("updateValues: Device reachable", accessory.name);
-                    accessory.newAccessory.updateReachability(true);
+//                    accessory.newAccessory.updateReachability(true);
                 } else {
                     that.log("updateValues: Device not reachable", accessory.name);
-                    accessory.newAccessory.updateReachability(false);
+//                    accessory.newAccessory.updateReachability(false);
                 }
 
                 if (!tcc.deepEquals(deviceData, accessory.device)) {
