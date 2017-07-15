@@ -133,7 +133,7 @@ function updateValues(that) {
             if (err) {
                 that.log("ERROR: UpdateValues", accessory.name, err);
                 that.log("updateValues: Device not reachable", accessory.name);
-//                accessory.newAccessory.updateReachability(false);
+                //                accessory.newAccessory.updateReachability(false);
                 tcc.login(that.username, that.password).then(function(login) {
                     that.log("Logged into tcc!");
                     session = login;
@@ -148,10 +148,10 @@ function updateValues(that) {
 
                 if (deviceData.deviceLive) {
                     //                    that.log("updateValues: Device reachable", accessory.name);
-//                    accessory.newAccessory.updateReachability(true);
+                    //                    accessory.newAccessory.updateReachability(true);
                 } else {
                     that.log("updateValues: Device not reachable", accessory.name);
-//                    accessory.newAccessory.updateReachability(false);
+                    //                    accessory.newAccessory.updateReachability(false);
                 }
 
                 if (!tcc.deepEquals(deviceData, accessory.device)) {
@@ -224,14 +224,14 @@ tccAccessory.prototype = {
         var CurrentHeatingCoolingState = this.device.latestData.uiData.EquipmentOutputStatus;
         that.log("getCurrentHeatingCoolingState is", CurrentHeatingCoolingState, this.name);
         if (CurrentHeatingCoolingState > 2)
-        // Maximum value is 2
+            // Maximum value is 2
             CurrentHeatingCoolingState = 2;
-        if (this.newAccessory.reachable) {
-            callback(null, Number(CurrentHeatingCoolingState));
-        } else {
-            that.log("getCurrentHeatingCoolingState: Device not reachable");
-            callback(new Error("Device not reachable"));
-        }
+        //        if (this.newAccessory.reachable) {
+        callback(null, Number(CurrentHeatingCoolingState));
+        //        } else {
+        //            that.log("getCurrentHeatingCoolingState: Device not reachable");
+        //            callback(new Error("Device not reachable"));
+        //        }
     },
 
     // This is to change the system switch to a different position
@@ -275,7 +275,7 @@ tccAccessory.prototype = {
 
         var TargetHeatingCooling = tcc.toHomeBridgeHeatingCoolingSystem(this.device.latestData.uiData.SystemSwitchPosition);
 
-        this.log("getTargetHeatingCooling is ", TargetHeatingCooling,this.name);
+        this.log("getTargetHeatingCooling is ", TargetHeatingCooling, this.name);
 
         callback(null, Number(TargetHeatingCooling));
 
@@ -334,20 +334,19 @@ tccAccessory.prototype = {
                 default:
                     break;
             }
-            that.log("setHeatCoolSetpoint",that.name,that.device.latestData.uiData.StatusHeat,that.device.latestData.uiData.StatusCool);
+            that.log("setHeatCoolSetpoint", that.name, that.device.latestData.uiData.StatusHeat, that.device.latestData.uiData.StatusCool);
             session.setHeatCoolSetpoint(that.deviceID, heatSetPoint, coolSetPoint).then(function(taskId) {
-                that.log("Successfully changed temperature!", that.name,taskId);
-                if ( taskId.success )
-                {
-                  that.log("Successfully changed temperature!", taskId);
-                  callback();
+                that.log("Successfully changed temperature!", that.name, taskId);
+                if (taskId.success) {
+                    that.log("Successfully changed temperature!", taskId);
+                    callback();
                 } else {
-                  that.log("Error: Unsuccessfully changed temperature!", that.name,taskId);
-                  callback(new Error("Error: setHeatCoolSetpoint"));
+                    that.log("Error: Unsuccessfully changed temperature!", that.name, taskId);
+                    callback(new Error("Error: setHeatCoolSetpoint"));
                 }
                 updateValues(that); // refresh
             }.bind(this)).fail(function(err) {
-                that.log('Error: setHeatCoolSetpoint', that.name,err);
+                that.log('Error: setHeatCoolSetpoint', that.name, err);
                 callback(err);
             });
             updating = false;
@@ -403,7 +402,7 @@ tccAccessory.prototype = {
     getTemperatureDisplayUnits: function(callback) {
         var that = this;
         var temperatureUnits = 0;
-        that.log("getTemperatureDisplayUnits",this.name);
+        that.log("getTemperatureDisplayUnits", this.name);
         switch (this.device.latestData.uiData.DisplayUnits) {
             case "F":
                 that.log("Temperature unit for", this.name, "is set to", this.device.latestData.uiData.DisplayUnits);

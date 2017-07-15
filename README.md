@@ -10,8 +10,6 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
 * RTH8580WF
 * RTH9580
 
-* This plugin not work with the international
-
 # Installation
 
 1. Install homebridge using: npm install -g homebridge <br>
@@ -63,3 +61,4 @@ It seems to be vitally important to set the right system time, especially on ras
 - Dan / Ghostbit - Borrowed your python script for the page flow of the TCC website
 - bwdeleeuw - Fahrenheit testing and other enhancements
 - devbymike - Validation of RTH9580
+- djsomi - Investigation into international TCC site
