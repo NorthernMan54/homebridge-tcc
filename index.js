@@ -529,12 +529,8 @@ tccAccessory.prototype = {
         var informationService = new Service.AccessoryInformation();
 
         informationService
-            .setCharacteristic(Characteristic.Identify, this.name)
             .setCharacteristic(Characteristic.Manufacturer, "Honeywell")
-            .setCharacteristic(Characteristic.Model, this.model)
-            .setCharacteristic(Characteristic.Name, this.name)
             .setCharacteristic(Characteristic.SerialNumber, this.deviceID); // need to stringify the this.serial
-
         // Thermostat Service
         this.thermostatService = new Service.Thermostat(this.name);
 

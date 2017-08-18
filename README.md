@@ -9,6 +9,7 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
 
 * RTH8580WF
 * RTH9580
+* TH6320WF
 
 # Installation
 
@@ -62,3 +63,4 @@ It seems to be vitally important to set the right system time, especially on ras
 - bwdeleeuw - Fahrenheit testing and other enhancements
 - devbymike - Validation of RTH9580
 - djsomi - Investigation into international TCC site
+- gsulshski - Validation of TH6320WF
