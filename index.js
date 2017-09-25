@@ -20,6 +20,7 @@
 /*jslint node: true */
 'use strict';
 
+var debug = require('debug')('tcc');
 var tcc = require('./lib/tcc.js');
 var Accessory, Service, Characteristic, UUIDGen, CommunityTypes;
 
@@ -42,7 +43,6 @@ function tccPlatform(log, config, api) {
     this.username = config['username'];
     this.password = config['password'];
     this.refresh = config['refresh'] || 60; // Update every minute
-    this.debug = config['debug'] || false;
     this.log = log;
     this.devices = config['devices'];
 
@@ -55,7 +55,6 @@ tccPlatform.prototype = {
         var that = this;
 
         tcc.setCharacteristic(Characteristic);
-        tcc.setDebug(this.debug);
 
         tcc.login(that.username, that.password).then(function(login) {
             this.log("Logged into tcc!", this.devices);
@@ -72,7 +71,7 @@ tccPlatform.prototype = {
                             } else {
 
                                 var newAccessory = new tccAccessory(that.log, device.name,
-                                    deviceData, that.username, that.password, device.deviceID, that.debug);
+                                    deviceData, that.username, that.password, device.deviceID);
                                 // store accessory in myAccessories
                                 myAccessories.push(newAccessory);
                                 resolve();
@@ -142,8 +141,7 @@ function updateValues(that) {
                     that.log("Error during Login:", err);
                 });
             } else {
-                if (that.debug)
-                    that.log("Update Values", accessory.name, deviceData);
+                debug("Update Values", accessory.name, deviceData);
                 // Data is live
 
                 if (deviceData.deviceLive) {
@@ -169,7 +167,7 @@ function updateValues(that) {
 
 // give this function all the parameters needed
 
-function tccAccessory(log, name, deviceData, username, password, deviceID, debug) {
+function tccAccessory(log, name, deviceData, username, password, deviceID) {
 
     var uuid = UUIDGen.generate(name);
 
@@ -185,8 +183,6 @@ function tccAccessory(log, name, deviceData, username, password, deviceID, debug
     this.username = username;
     this.password = password;
     this.deviceID = deviceID;
-    this.debug = debug;
-
     //    return newAccessory;
 }
 
