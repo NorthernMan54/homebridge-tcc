@@ -568,9 +568,6 @@ tccAccessory.prototype = {
         // this.addCharacteristic(Characteristic.TargetTemperature); READ WRITE
         this.thermostatService
             .getCharacteristic(Characteristic.TargetTemperature)
-            .setProps({
-                minStep: 0.5
-            })
             .on('get', this.getTargetTemperature.bind(this))
             .on('set', this.setTargetTemperature.bind(this));
 
