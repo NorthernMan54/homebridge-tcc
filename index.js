@@ -21,8 +21,7 @@
 'use strict';
 
 var debug = require('debug')('tcc');
-var tcc = require('./lib/tcc.js');
-var Accessory, Service, Characteristic, UUIDGen, FakeGatoHistoryService;
+var Accessory, Service, Characteristic, UUIDGen, FakeGatoHistoryService, CustomCharacteristic, tcc;
 var os = require("os");
 var hostname = os.hostname();
 const moment = require('moment');
@@ -37,7 +36,11 @@ module.exports = function(homebridge) {
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   UUIDGen = homebridge.hap.uuid;
+  CustomCharacteristic = require('./lib/CustomCharacteristic.js')(homebridge);
   FakeGatoHistoryService = require('fakegato-history')(homebridge);
+  tcc = require('./lib/tcc.js');
+
+  tcc.setCharacteristic(Characteristic);
 
   homebridge.registerPlatform("homebridge-tcc", "tcc", tccPlatform);
 }
@@ -57,9 +60,6 @@ tccPlatform.prototype = {
   accessories: function(callback) {
     this.log("Logging into tcc...");
     var that = this;
-
-    tcc.setCharacteristic(Characteristic);
-
     tcc.login(that.username, that.password).then(function(login) {
       this.log("Logged into tcc!", this.devices);
       session = login;
@@ -104,21 +104,29 @@ tccPlatform.prototype = {
 
 function updateStatus(service, data) {
   service.getCharacteristic(Characteristic.TargetTemperature)
-    .updateValue(accessory.getTargetTemperature());
+    .updateValue(Number(tcc.toHBTargetTemperature(data)));
+
   service.getCharacteristic(Characteristic.CurrentTemperature)
-    .getValue();
+    .updateValue(data.latestData.uiData.DispTemperature);
+
   service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
-    .getValue();
+    .updateValue(data.latestData.uiData.EquipmentOutputStatus);
+
   service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
-    .getValue();
+    .updateValue(Number(tcc.toHomeBridgeHeatingCoolingSystem(data.latestData.uiData.SystemSwitchPosition)));
+
+  service.getCharacteristic(Characteristic.TemperatureDisplayUnits)
+    .updateValue(Number(tcc.toHBTemperatureDisplayUnits(data.latestData.uiData.DisplayUnits)));
+
   if (data.latestData.uiData.IndoorHumiditySensorAvailable && data.latestData.uiData.IndoorHumiditySensorNotFault)
     service.getCharacteristic(Characteristic.CurrentRelativeHumidity)
-    .getValue();
+    .updateValue(data.latestData.uiData.IndoorHumidity);
+
   if (data.latestData.uiData.SwitchAutoAllowed) {
     service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
-      .getValue();
+      .updateValue(data.latestData.uiData.CoolSetpoint);
     service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
-      .getValue();
+      .updateValue(data.latestData.uiData.HeatSetpoint);
   }
 
 }
@@ -161,15 +169,12 @@ function updateValues(that) {
         accessory.loggingService.addEntry({
           time: moment().unix(),
           currentTemp: roundInt(deviceData.latestData.uiData.DispTemperature),
-          setTemp: roundInt(accessory.getTargetTemperature()),
-          valvePosition: accessory.getCurrentHeatingCoolingState()
+          setTemp: roundInt(tcc.toHBTargetTemperature(deviceData)),
+          valvePosition: roundInt(deviceData.latestData.uiData.EquipmentOutputStatus)
         });
 
-        accessory.temperatureSensor.getCharacteristic(Characteristic.CurrentTemperature).updateValue(roundInt(deviceData.latestData.uiData.DispTemperature));
+        updateStatus(accessory.thermostatService, deviceData);
 
-        if (!tcc.deepEquals(deviceData, accessory.device)) {
-          updateStatus(accessory.thermostatService, deviceData);
-        }
       }
     });
   });
@@ -198,45 +203,7 @@ function tccAccessory(log, name, deviceData, username, password, deviceID) {
 
 tccAccessory.prototype = {
 
-  getName: function(callback) {
 
-    var that = this;
-    that.log("requesting name of", this.name);
-    callback(this.name);
-
-  },
-
-  getCurrentRelativeHumidity: function(callback) {
-    var that = this;
-
-    var currentRelativeHumidity = this.device.latestData.uiData.IndoorHumidity;
-
-
-    callback(null, Number(currentRelativeHumidity));
-    that.log("Current relative humidity of " + this.name + " is " + currentRelativeHumidity + "%");
-  },
-
-  // This is showing what the HVAC unit is doing
-
-  getCurrentHeatingCoolingState: function(callback) {
-    var that = this;
-    // OFF  = 0
-    // HEAT = 1
-    // COOL = 2
-
-    // EquipmentOutputStatus is 1 when HVAC is running in heat mode, and 2
-    // when running in cool mode
-
-    var CurrentHeatingCoolingState = this.device.latestData.uiData.EquipmentOutputStatus;
-    that.log("getCurrentHeatingCoolingState is", CurrentHeatingCoolingState, this.name);
-    if (CurrentHeatingCoolingState > 2)
-      // Maximum value is 2
-      CurrentHeatingCoolingState = 2;
-    //        if (this.newAccessory.reachable) {
-    if( callback )
-      callback(null, Number(CurrentHeatingCoolingState));
-    return(Number(CurrentHeatingCoolingState));
-  },
 
   // This is to change the system switch to a different position
 
@@ -265,33 +232,6 @@ tccAccessory.prototype = {
       callback(null, Number(0));
       updating = false
     }
-  },
-  // This is to read the system switch
-
-  getTargetHeatingCooling: function(callback) {
-    var that = this;
-
-    // Homekit allowed values
-    // OFF  = 0
-    // HEAT = 1
-    // COOL = 2
-    // AUTO = 3
-
-    var TargetHeatingCooling = tcc.toHomeBridgeHeatingCoolingSystem(this.device.latestData.uiData.SystemSwitchPosition);
-
-    this.log("getTargetHeatingCooling is ", TargetHeatingCooling, this.name);
-
-    callback(null, Number(TargetHeatingCooling));
-
-  },
-
-  getCurrentTemperature: function(callback) {
-    var that = this;
-
-    var currentTemperature = tcc.toHBTemperature(this, this.device.latestData.uiData.DispTemperature);
-    that.log("Current temperature of " + this.name + " is " + currentTemperature + "°");
-
-    callback(null, Number(currentTemperature));
   },
 
   setTargetTemperature: function(value, callback) {
@@ -357,74 +297,6 @@ tccAccessory.prototype = {
     }
   },
 
-  getTargetTemperature: function(callback) {
-    var that = this;
-
-    //    maxValue: 38,
-    //    minValue: 10,
-    // Homebridge expects temperatures in C, but Honeywell will return F if configured.
-
-    if (this.model = "EMEA_ZONE") {
-      switch (tcc.toHomeBridgeHeatingCoolingSystem(that.device.latestData.uiData.SystemSwitchPosition)) {
-        case Characteristic.TargetHeatingCoolingState.OFF:
-          // Not sure what to do here, so will display current temperature
-          var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.DispTemperature);
-          break;
-        case Characteristic.TargetHeatingCoolingState.HEAT:
-          var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.HeatSetpoint);
-          break;
-        case Characteristic.TargetHeatingCoolingState.COOL:
-          var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.CoolSetpoint);
-          break;
-        case Characteristic.TargetHeatingCoolingState.AUTO:
-          // Not sure what to do here, so will display current temperature
-          var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.DispTemperature);
-          break;
-        default:
-          // Not sure what to do here, so will display current temperature
-          var targetTemperature = tcc.toHBTemperature(that, this.device.latestData.uiData.DispTemperature);
-          break
-      }
-
-      //        that.log("Device type is: " + this.model + ". Target temperature should be there.");
-      that.log("Target temperature for", this.name, "is", targetTemperature + "°");
-    } else {
-      var targetTemperature = 0;
-      that.log("Device type is: " + this.model + ". Target temperature is probably NOT there (this is normal).");
-      that.log("Will set target temperature for", this.name, "to " + targetTemperature + "°");
-    }
-
-    if (targetTemperature < 10)
-      targetTemperature = 10;
-
-    if (targetTemperature > 38)
-      targetTemperature = 38;
-    if (callback)
-      callback(null, Number(targetTemperature));
-    return(targetTemperature);
-
-  },
-
-  getTemperatureDisplayUnits: function(callback) {
-    var that = this;
-    var temperatureUnits = 0;
-    that.log("getTemperatureDisplayUnits", this.name);
-    switch (this.device.latestData.uiData.DisplayUnits) {
-      case "F":
-        that.log("Temperature unit for", this.name, "is set to", this.device.latestData.uiData.DisplayUnits);
-        temperatureUnits = 1;
-        break;
-      case "C":
-        that.log("Temperature unit for", this.name, "is set to", this.device.latestData.uiData.DisplayUnits);
-        temperatureUnits = 0;
-        break;
-      default:
-        temperatureUnits = 0;
-    }
-
-    callback(null, Number(temperatureUnits));
-  },
-
   getCoolingThresholdTemperature: function(callback) {
     var that = this;
 
@@ -471,15 +343,6 @@ tccAccessory.prototype = {
       callback(null, Number(0));
       updating = false;
     }
-  },
-
-  getHeatingThresholdTemperature: function(callback) {
-    var that = this;
-
-    var heatingthresholdTemperature = tcc.toHBTemperature(this, this.device.latestData.uiData.HeatSetpoint);
-    that.log("Heat Setpoint temperature of " + this.name + " is " + heatingthresholdTemperature + "°");
-
-    callback(null, Number(heatingthresholdTemperature));
   },
 
   setHeatingThresholdTemperature: function(value, callback) {
@@ -541,18 +404,11 @@ tccAccessory.prototype = {
     // Thermostat Service
     this.thermostatService = new Service.Thermostat(this.name);
 
-    // Required Characteristics /////////////////////////////////////////////////////////////
-    // this.addCharacteristic(Characteristic.CurrentHeatingCoolingState); READ
-    this.thermostatService
-      .getCharacteristic(Characteristic.CurrentHeatingCoolingState)
-      .on('get', this.getCurrentHeatingCoolingState.bind(this));
-
     // this.addCharacteristic(Characteristic.TargetHeatingCoolingState); READ WRITE
 
     if (this.device.latestData.uiData.SwitchAutoAllowed) {
       this.thermostatService
         .getCharacteristic(Characteristic.TargetHeatingCoolingState)
-        .on('get', this.getTargetHeatingCooling.bind(this))
         .on('set', this.setTargetHeatingCooling.bind(this));
     } else {
       // don't display Auto if it isn't supported
@@ -561,66 +417,41 @@ tccAccessory.prototype = {
         .setProps({
           validValues: [0, 1, 2]
         })
-        .on('get', this.getTargetHeatingCooling.bind(this))
         .on('set', this.setTargetHeatingCooling.bind(this));
     }
 
-
-
-    // this.addCharacteristic(Characteristic.CurrentTemperature); READ
     this.thermostatService
       .getCharacteristic(Characteristic.CurrentTemperature)
       .setProps({
-        minValue: -100,
+        minValue: -100, // If you need this, you have major problems!!!!!
         maxValue: 100
-      })
-      .on('get', this.getCurrentTemperature.bind(this));
+      });
 
     // this.addCharacteristic(Characteristic.TargetTemperature); READ WRITE
     this.thermostatService
       .getCharacteristic(Characteristic.TargetTemperature)
-      .on('get', this.getTargetTemperature.bind(this))
       .on('set', this.setTargetTemperature.bind(this));
 
-    // this.addCharacteristic(Characteristic.TemperatureDisplayUnits); READ WRITE
-    this.thermostatService
-      .getCharacteristic(Characteristic.TemperatureDisplayUnits)
-      .on('get', this.getTemperatureDisplayUnits.bind(this));
-
-    // Optional Characteristics /////////////////////////////////////////////////////////////
-    // this.addOptionalCharacteristic(Characteristic.CurrentRelativeHumidity);
-    if (this.device.latestData.uiData.IndoorHumiditySensorAvailable && this.device.latestData.uiData.IndoorHumiditySensorNotFault) {
-      this.thermostatService
-        .getCharacteristic(Characteristic.CurrentRelativeHumidity)
-        .on('get', this.getCurrentRelativeHumidity.bind(this));
-    }
-
-    // this.addOptionalCharacteristic(Characteristic.TargetRelativeHumidity);
-    // this.addOptionalCharacteristic(Characteristic.CoolingThresholdTemperature);
     if (this.device.latestData.uiData.SwitchAutoAllowed) {
       // Only available on models with an Auto Mode
       this.thermostatService
         .getCharacteristic(Characteristic.CoolingThresholdTemperature)
-        .on('get', this.getCoolingThresholdTemperature.bind(this))
         .on('set', this.setCoolingThresholdTemperature.bind(this))
 
       // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
       this.thermostatService
         .getCharacteristic(Characteristic.HeatingThresholdTemperature)
-        .on('get', this.getHeatingThresholdTemperature.bind(this))
         .on('set', this.setHeatingThresholdTemperature.bind(this));
     }
-    // this.addOptionalCharacteristic(Characteristic.Name);
-    this.thermostatService
-      .getCharacteristic(Characteristic.Name)
-      .on('get', this.getName.bind(this));
 
     this.thermostatService.log = this.log;
     this.loggingService = new FakeGatoHistoryService("thermo", this.thermostatService);
 
-    this.temperatureSensor = new Service.TemperatureSensor(this.name);
+    this.thermostatService.addCharacteristic(CustomCharacteristic.ValvePosition);
+    this.thermostatService.addCharacteristic(CustomCharacteristic.ProgramCommand);
+    this.thermostatService.addCharacteristic(CustomCharacteristic.ProgramData);
 
-    return [informationService, this.thermostatService, this.loggingService, this.temperatureSensor];
+    return [informationService, this.thermostatService, this.loggingService];
 
   }
 }
