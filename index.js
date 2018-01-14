@@ -132,7 +132,6 @@ function updateStatus(service, data) {
 }
 
 tccPlatform.prototype.periodicUpdate = function(t) {
-  this.log("periodicUpdate");
   var t = updateValues(this);
 }
 
@@ -166,12 +165,18 @@ function updateValues(that) {
 
         that.log("Change", accessory.name, tcc.diff(accessory.device, deviceData));
         accessory.device = deviceData;
-        accessory.loggingService.addEntry({
-          time: moment().unix(),
-          currentTemp: roundInt(deviceData.latestData.uiData.DispTemperature),
-          setTemp: roundInt(tcc.toHBTargetTemperature(deviceData)),
-          valvePosition: roundInt(deviceData.latestData.uiData.EquipmentOutputStatus)
-        });
+
+        accessory.log_event_counter++;
+        if (!(accessory.log_event_counter % 10)) {
+          accessory.loggingService.addEntry({
+            time: moment().unix(),
+            currentTemp: roundInt(deviceData.latestData.uiData.DispTemperature),
+            setTemp: roundInt(tcc.toHBTargetTemperature(deviceData)),
+            valvePosition: roundInt(deviceData.latestData.uiData.EquipmentOutputStatus)
+          });
+          accessory.log_event_counter = 0;
+        }
+
 
         updateStatus(accessory.thermostatService, deviceData);
 
@@ -186,9 +191,7 @@ function tccAccessory(log, name, deviceData, username, password, deviceID) {
 
   var uuid = UUIDGen.generate(name);
 
-  this.newAccessory = new Accessory(name, uuid);
-
-  //    newAccessory.name = name;
+//  var accessory = new Accessory(name, uuid);
 
   this.log = log;
   this.log("Adding TCC Device", name, deviceID);
@@ -198,12 +201,10 @@ function tccAccessory(log, name, deviceData, username, password, deviceID) {
   this.username = username;
   this.password = password;
   this.deviceID = deviceID;
-  //    return newAccessory;
+  this.log_event_counter = 9;   // Update fakegato on startup
 }
 
 tccAccessory.prototype = {
-
-
 
   // This is to change the system switch to a different position
 
@@ -220,8 +221,6 @@ tccAccessory.prototype = {
         session.setSystemSwitch(that.deviceID, tcc.toTCCHeadingCoolingSystem(value)).then(function(taskId) {
           that.log("Successfully changed system!");
           that.log(taskId);
-          // Update all information
-          // TODO: call periodicUpdate to refresh all data elements
           updateValues(that);
           callback(null, Number(1));
         });
@@ -295,15 +294,6 @@ tccAccessory.prototype = {
       });
       updating = false;
     }
-  },
-
-  getCoolingThresholdTemperature: function(callback) {
-    var that = this;
-
-    var coolingthresholdTemperature = tcc.toHBTemperature(this, this.device.latestData.uiData.CoolSetpoint);
-    that.log("Cool Setpoint temperature of " + this.name + " is " + coolingthresholdTemperature + "°");
-
-    callback(null, Number(coolingthresholdTemperature));
   },
 
   setCoolingThresholdTemperature: function(value, callback) {
@@ -436,7 +426,7 @@ tccAccessory.prototype = {
       // Only available on models with an Auto Mode
       this.thermostatService
         .getCharacteristic(Characteristic.CoolingThresholdTemperature)
-        .on('set', this.setCoolingThresholdTemperature.bind(this))
+        .on('set', this.setCoolingThresholdTemperature.bind(this));
 
       // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
       this.thermostatService
