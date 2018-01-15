@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "debug": "^2.6.9",
-    "fakegato-history": "NorthernMan54/fakegato-history#Platform",
+    "fakegato-history": "simont77/fakegato-history#platform-fix",
     "lodash": "^2.4.2",
     "moment": "^2.20.1",
     "q": "^1.0.1",
