@@ -107,7 +107,7 @@ function updateStatus(service, data) {
     .updateValue(Number(tcc.toHBTargetTemperature(data)));
 
   service.getCharacteristic(Characteristic.CurrentTemperature)
-    .updateValue(data.latestData.uiData.DispTemperature);
+    .updateValue(Number(tcc.toHBTemperature(data, data.latestData.uiData.DispTemperature)));
 
   service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
     .updateValue(data.latestData.uiData.EquipmentOutputStatus);
@@ -124,9 +124,9 @@ function updateStatus(service, data) {
 
   if (data.latestData.uiData.SwitchAutoAllowed) {
     service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
-      .updateValue(data.latestData.uiData.CoolSetpoint);
+      .updateValue(Number(tcc.toHBTemperature(data, data.latestData.uiData.CoolSetpoint)));
     service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
-      .updateValue(data.latestData.uiData.HeatSetpoint);
+      .updateValue(Number(tcc.toHBTemperature(data, data.latestData.uiData.HeatSetpoint)));
   }
 
 }
