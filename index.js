@@ -436,7 +436,6 @@ tccAccessory.prototype = {
         .on('set', this.setHeatingThresholdTemperature.bind(this));
     }
 
-    console.log("THIS",storage,refresh);
     this.thermostatService.log = this.log;
     this.loggingService = new FakeGatoHistoryService("thermo", this.thermostatService, {
           storage: storage,
