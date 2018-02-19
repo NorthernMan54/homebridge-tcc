@@ -46,9 +46,11 @@ device. Now look in the address bar and you will see something like:
 https://mytotalconnectcomfort.com/portal/Device/Control/1234567
 
 The last part is your Device ID.
-- debug: optional parameter, will return details in log around response from TCC,
-use full for debugging no response errors.
-- refresh: How often the data is refreshed from the TCC website, in seconds.  Defaults to 60
+
+# Optional settings
+
+* `refresh` - Data polling interval in seconds, defaults to 60 seconds
+* `storage` - Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs
 
 # Roadmap
 

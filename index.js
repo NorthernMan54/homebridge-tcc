@@ -29,6 +29,7 @@ const moment = require('moment');
 var myAccessories = [];
 var session; // reuse the same login session
 var updating; // Only one change at a time!!!!
+var refresh,storage;
 
 module.exports = function(homebridge) {
 
@@ -49,9 +50,10 @@ function tccPlatform(log, config, api) {
 
   this.username = config['username'];
   this.password = config['password'];
-  this.refresh = config['refresh'] || 60; // Update every minute
+  refresh = config['refresh'] || 60; // Update every minute
   this.log = log;
   this.devices = config['devices'];
+  storage = config['storage'] || "fs";
 
   updating = false;
 }
@@ -89,7 +91,7 @@ tccPlatform.prototype = {
       Promise.all(requests).then(() => {
         callback(myAccessories);
         that.periodicUpdate();
-        setInterval(that.periodicUpdate.bind(this), this.refresh * 1000);
+        setInterval(that.periodicUpdate.bind(this), refresh * 1000);
 
       });
 
@@ -434,8 +436,12 @@ tccAccessory.prototype = {
         .on('set', this.setHeatingThresholdTemperature.bind(this));
     }
 
+    console.log("THIS",storage,refresh);
     this.thermostatService.log = this.log;
-    this.loggingService = new FakeGatoHistoryService("thermo", this.thermostatService);
+    this.loggingService = new FakeGatoHistoryService("thermo", this.thermostatService, {
+          storage: storage,
+          minutes: refresh * 10 / 60
+        });
 
     this.thermostatService.addCharacteristic(CustomCharacteristic.ValvePosition);
     this.thermostatService.addCharacteristic(CustomCharacteristic.ProgramCommand);
