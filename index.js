@@ -172,7 +172,7 @@ function updateValues(that) {
         if (!(accessory.log_event_counter % 10)) {
           accessory.loggingService.addEntry({
             time: moment().unix(),
-            currentTemp: roundInt(deviceData.latestData.uiData.DispTemperature),
+            currentTemp: roundInt(tcc.toHBTemperature(deviceData, deviceData.latestData.uiData.DispTemperature)),
             setTemp: roundInt(tcc.toHBTargetTemperature(deviceData)),
             valvePosition: roundInt(deviceData.latestData.uiData.EquipmentOutputStatus)
           });
