@@ -390,7 +390,7 @@ tccAccessory.prototype = {
     var informationService = new Service.AccessoryInformation();
 
     informationService
-      .setCharacteristic(Characteristic.Manufacturer, "NorthernMan54")
+      .setCharacteristic(Characteristic.Manufacturer, "TCC")
       .setCharacteristic(Characteristic.SerialNumber, hostname + "-" + this.deviceID)
       .setCharacteristic(Characteristic.FirmwareRevision, require('./package.json').version);
     // Thermostat Service
