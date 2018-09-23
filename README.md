@@ -7,6 +7,7 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
 
 # Devices Tested With
 
+* RTH6580WF
 * RTH8580WF
 * RTH9580
 * TH6320WF
