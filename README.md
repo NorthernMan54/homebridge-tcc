@@ -30,8 +30,8 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
             "username" : ".....",
             "password" : ".....",
             "devices" : [
-                  {"deviceID": "1234567","name": "Other Floor"},
-                  {"deviceID": "abcdefg","name": "Main Floor"}
+                  {"deviceID": "1234567", "name": "Other Floor", "usePermanentHolds": true},
+                  {"deviceID": "abcdefg", "name": "Main Floor", "usePermanentHolds": false}
           	]
         },
     ]
