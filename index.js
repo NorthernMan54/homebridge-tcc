@@ -77,7 +77,7 @@ tccPlatform.prototype = {
               } else {
 
                 var newAccessory = new tccAccessory(that.log, device.name,
-                  deviceData, that.username, that.password, device.deviceID);
+                  deviceData, that.username, that.password, device.deviceID, device.usePermanentHolds);
                 // store accessory in myAccessories
                 myAccessories.push(newAccessory);
                 resolve();
@@ -189,7 +189,7 @@ function updateValues(that) {
 
 // give this function all the parameters needed
 
-function tccAccessory(log, name, deviceData, username, password, deviceID) {
+function tccAccessory(log, name, deviceData, username, password, deviceID, usePermanentHolds) {
 
   var uuid = UUIDGen.generate(name);
 
@@ -203,6 +203,7 @@ function tccAccessory(log, name, deviceData, username, password, deviceID) {
   this.username = username;
   this.password = password;
   this.deviceID = deviceID;
+  this.usePermanentHolds = usePermanentHolds;
   this.log_event_counter = 9;   // Update fakegato on startup
 }
 
@@ -280,7 +281,7 @@ tccAccessory.prototype = {
           break;
       }
       that.log("setHeatCoolSetpoint", that.name, that.device.latestData.uiData.StatusHeat, that.device.latestData.uiData.StatusCool);
-      session.setHeatCoolSetpoint(that.deviceID, heatSetPoint, coolSetPoint).then(function(taskId) {
+      session.setHeatCoolSetpoint(that.deviceID, heatSetPoint, coolSetPoint, that.usePermanentHolds).then(function(taskId) {
         that.log("Successfully changed temperature!", that.name, taskId);
         if (taskId.success) {
           that.log("Successfully changed temperature!", taskId);
@@ -320,7 +321,7 @@ tccAccessory.prototype = {
       // verify that the task did succeed
 
       tcc.login(this.username, this.password).then(function(session) {
-        session.setHeatCoolSetpoint(that.deviceID, null, value).then(function(taskId) {
+        session.setHeatCoolSetpoint(that.deviceID, null, value, that.usePermanentHolds).then(function(taskId) {
           that.log("Successfully changed cooling threshold!");
           that.log(taskId);
           // returns taskId if successful

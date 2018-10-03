@@ -30,8 +30,8 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
             "username" : ".....",
             "password" : ".....",
             "devices" : [
-                  {"deviceID": "1234567","name": "Other Floor"},
-                  {"deviceID": "abcdefg","name": "Main Floor"}
+                  {"deviceID": "1234567", "name": "Other Floor", "usePermanentHolds": true},
+                  {"deviceID": "abcdefg", "name": "Main Floor", "usePermanentHolds": false}
           	]
         },
     ]
@@ -52,6 +52,7 @@ The last part is your Device ID.
 
 * `refresh` - Data polling interval in seconds, defaults to 60 seconds
 * `storage` - Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs
+* `usePermanentHolds` - Place in the `device` block correlated with your thermostat. If set to `true`, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to `false`, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off.
 
 # Roadmap
 
@@ -71,3 +72,4 @@ It seems to be vitally important to set the right system time, especially on ras
 - gsulshski - Validation of TH6320WF
 - l3nticular - Support for Mode 7
 - simont77 - FakeGato History
+- @hakusaro - Added support for permanent temperature holds.
