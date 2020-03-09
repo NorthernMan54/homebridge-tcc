@@ -99,7 +99,7 @@ tccPlatform.prototype = {
     }.bind(this)).fail(function(err) {
       // tell me if login did not work!
       that.log("Error during Login:", err);
-      callback(err);
+      callback(myAccessories);
     });
   }
 };
