@@ -1,10 +1,13 @@
-if ~/npm/bin/nsp check --filter 2; then
-git add .
-git commit -m "$1"
-#git push origin master --tags
-npm version patch
-git push origin master --tags
-npm publish
-else
-	echo "Not publishing due to security vulnerabilites"
-fi
+#! /bin/sh
+
+#if npm audit; then
+  npm run-script document
+  rm *orig* *toc\.*
+  git add .
+  npm version patch -m "$1" --force
+  npm publish
+  git commit -m "$1"
+  git push origin master --tags
+#else
+  echo "Not publishing due to security vulnerabilites"
+#fi
