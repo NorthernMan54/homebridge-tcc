@@ -226,12 +226,14 @@ tccAccessory.prototype = {
           that.log(taskId);
           updateValues(that);
           callback(null, Number(1));
+          return;
         });
       }).fail(function(err) {
         that.log('tcc Failed:', err);
         callback(null, Number(0));
+        return;
       });
-      callback(null, Number(0));
+      // callback(null, Number(0));
       updating = false
     }
   },
