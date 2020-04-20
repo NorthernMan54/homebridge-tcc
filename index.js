@@ -335,7 +335,7 @@ tccAccessory.prototype = {
         that.log('tcc Failed:', err);
         callback(null, Number(0));
       });
-      callback(null, Number(0));
+      // callback(null, Number(0));
       updating = false;
     }
   },
@@ -374,7 +374,7 @@ tccAccessory.prototype = {
         that.log('tcc Failed:', err);
         callback(null, Number(0));
       });
-      callback(null, Number(0));
+      // callback(null, Number(0));
       updating = false;
     }
   },
