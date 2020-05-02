@@ -138,7 +138,7 @@ tccPlatform.prototype.periodicUpdate = function(t) {
 }
 
 function updateValues(that) {
-  that.log("updateValues", myAccessories.length);
+  // that.log("updateValues", myAccessories.length);
   myAccessories.forEach(function(accessory) {
 
     session.CheckDataSession(accessory.deviceID, function(err, deviceData) {
@@ -165,7 +165,7 @@ function updateValues(that) {
           //                    accessory.newAccessory.updateReachability(false);
         }
 
-        that.log("Change", accessory.name, tcc.diff(accessory.device, deviceData));
+        debug("Change", accessory.name, tcc.diff(accessory.device, deviceData));
         accessory.device = deviceData;
 
         accessory.log_event_counter++;
