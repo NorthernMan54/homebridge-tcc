@@ -33,7 +33,7 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
                   {"deviceID": "1234567", "name": "Other Floor", "usePermanentHolds": true},
                   {"deviceID": "abcdefg", "name": "Main Floor", "usePermanentHolds": false}
           	]
-        },
+        }
     ]
 ```
 
