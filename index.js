@@ -48,7 +48,7 @@ tccPlatform.prototype.didFinishLaunching = function() {
         debug("Creating accessory for", devices.LocationInfo.Thermostats[zone].DeviceName);
         // debug("123", devices.hb);
         var newAccessory = new TccAccessory(this, devices.LocationInfo.Thermostats[zone], devices.hb[devices.LocationInfo.Thermostats[zone].ThermostatID]);
-        updateStatus(newAccessory, devices);
+        updateStatus(newAccessory, devices.hb[devices.LocationInfo.Thermostats[zone].ThermostatID]);
       }
     }
   }.bind(this));
@@ -83,22 +83,24 @@ function pollDevices() {
     }
     myAccessories.forEach(function(accessory) {
       debug("pollDevices - updateStatus", accessory.displayName);
-      updateStatus(accessory, devices);
+      updateStatus(accessory, devices.hb[accessory.context.ThermostatID]);
     });
   }.bind(this));
 }
 
-function updateStatus(accessory, devices) {
+function updateStatus(accessory, device) {
   var service = accessory.getService(Service.Thermostat);
   debug("updateStatus", accessory.displayName);
+  debug("updateStatus - device", device);
+  accessory.context.device = device.device;
   service.getCharacteristic(Characteristic.TargetTemperature)
-    .updateValue(devices.hb[accessory.context.ThermostatID].TargetTemperature);
+    .updateValue(device.TargetTemperature);
   service.getCharacteristic(Characteristic.CurrentTemperature)
-    .updateValue(devices.hb[accessory.context.ThermostatID].CurrentTemperature);
+    .updateValue(device.CurrentTemperature);
   service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
-    .updateValue(devices.hb[accessory.context.ThermostatID].CurrentHeatingCoolingState);
+    .updateValue(device.CurrentHeatingCoolingState);
   service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
-    .updateValue(devices.hb[accessory.context.ThermostatID].TargetHeatingCoolingState);
+    .updateValue(device.TargetHeatingCoolingState);
 }
 
 function TccAccessory(that, device, hbValues) {
@@ -118,6 +120,8 @@ function TccAccessory(that, device, hbValues) {
     this.accessory = new Accessory(this.name, uuid, 10);
 
     this.accessory.context.ThermostatID = device.ThermostatID;
+    this.accessory.context.device = device.device;
+    debug("TccAccessory-context", device.device);
 
     this.accessory.getService(Service.AccessoryInformation)
       .setCharacteristic(Characteristic.Manufacturer, "TCC")
