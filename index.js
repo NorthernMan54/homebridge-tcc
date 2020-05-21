@@ -92,7 +92,7 @@ function updateStatus(accessory, device) {
   var service = accessory.getService(Service.Thermostat);
   debug("updateStatus", accessory.displayName);
   debug("updateStatus - device", device);
-  accessory.context.device = device.device;
+  // accessory.context.device = device.device;
   service.getCharacteristic(Characteristic.TargetTemperature)
     .updateValue(device.TargetTemperature);
   service.getCharacteristic(Characteristic.CurrentTemperature)
@@ -120,7 +120,7 @@ function TccAccessory(that, device, hbValues) {
     this.accessory = new Accessory(this.name, uuid, 10);
 
     this.accessory.context.ThermostatID = device.ThermostatID;
-    this.accessory.context.device = device.device;
+    // this.accessory.context.device = device.device;
     debug("TccAccessory-context", device.device);
 
     this.accessory.getService(Service.AccessoryInformation)
