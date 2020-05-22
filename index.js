@@ -50,6 +50,8 @@ tccPlatform.prototype.didFinishLaunching = function() {
         var newAccessory = new TccAccessory(this, devices.LocationInfo.Thermostats[zone], devices.hb[devices.LocationInfo.Thermostats[zone].ThermostatID]);
         updateStatus(newAccessory, devices.hb[devices.LocationInfo.Thermostats[zone].ThermostatID]);
       }
+    } else {
+      this.log(err.message);
     }
   }.bind(this));
 
@@ -79,7 +81,7 @@ function pollDevices() {
   // debug("pollDevices - thermo", thermostats);
   thermostats.poll(function(err, devices) {
     if (err) {
-      this.log("ERROR: pollDevices", err, devices);
+      this.log("ERROR: pollDevices", err.messages);
     }
     myAccessories.forEach(function(accessory) {
       debug("pollDevices - updateStatus", accessory.displayName);
@@ -90,8 +92,8 @@ function pollDevices() {
 
 function updateStatus(accessory, device) {
   var service = accessory.getService(Service.Thermostat);
-  debug("updateStatus", accessory.displayName);
-  debug("updateStatus - device", device);
+  // debug("updateStatus", accessory.displayName);
+  // debug("updateStatus - device", device);
   // accessory.context.device = device.device;
   service.getCharacteristic(Characteristic.TargetTemperature)
     .updateValue(device.TargetTemperature);
