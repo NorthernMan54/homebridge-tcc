@@ -44,11 +44,24 @@ tccPlatform.prototype.didFinishLaunching = function() {
 
   thermostats = new Tcc(this, function(err, devices) {
     if (!err) {
-      for (var zone in devices.LocationInfo.Thermostats) {
-        debug("Creating accessory for", devices.LocationInfo.Thermostats[zone].DeviceName);
+      if (Array.isArray(devices.LocationInfo.Thermostats.ThermostatInfo)) {
+        for (var zone in devices.LocationInfo.Thermostats.ThermostatInfo) {
+          // debug("TBD - zone", zone);
+          // debug("TBD - Ther", devices.LocationInfo.Thermostats.ThermostatInfo[zone]);
+
+          debug("Creating accessory for", devices.LocationInfo.Thermostats.ThermostatInfo[zone].DeviceName);
+          // debug("123", devices.hb);
+          var newAccessory = new TccAccessory(this, devices.LocationInfo.Thermostats.ThermostatInfo[zone], devices.hb[devices.LocationInfo.Thermostats.ThermostatInfo[zone].ThermostatID]);
+          updateStatus(newAccessory, devices.hb[devices.LocationInfo.Thermostats.ThermostatInfo[zone].ThermostatID]);
+        }
+      } else {
+        // debug("TBD - zone", zone);
+        debug("TBD - Ther", devices.LocationInfo.Thermostats.ThermostatInfo);
+
+        debug("Creating accessory for", devices.LocationInfo.Thermostats.ThermostatInfo.DeviceName);
         // debug("123", devices.hb);
-        var newAccessory = new TccAccessory(this, devices.LocationInfo.Thermostats[zone], devices.hb[devices.LocationInfo.Thermostats[zone].ThermostatID]);
-        updateStatus(newAccessory, devices.hb[devices.LocationInfo.Thermostats[zone].ThermostatID]);
+        var newAccessory = new TccAccessory(this, devices.LocationInfo.Thermostats.ThermostatInfo, devices.hb[devices.LocationInfo.Thermostats.ThermostatInfo.ThermostatID]);
+        updateStatus(newAccessory, devices.hb[devices.LocationInfo.Thermostats.ThermostatInfo.ThermostatID]);
       }
     } else {
       this.log(err.message);
@@ -111,7 +124,6 @@ function TccAccessory(that, device, hbValues) {
   this.name = device.DeviceName;
   this.ThermostatID = device.ThermostatID;
   this.device = device;
-  this.device.deviceLive = "false";
   this.usePermanentHolds = that.usePermanentHolds;
   this.log_event_counter = 9; // Update fakegato on startup
 
@@ -120,10 +132,10 @@ function TccAccessory(that, device, hbValues) {
   if (!getAccessoryByName(this.name)) {
     this.log("Adding TCC Device", this.name);
     this.accessory = new Accessory(this.name, uuid, 10);
-
+    this.accessory.log = that.log;
     this.accessory.context.ThermostatID = device.ThermostatID;
     // this.accessory.context.device = device.device;
-    debug("TccAccessory-context", device.device);
+    // debug("TccAccessory-context", device);
 
     this.accessory.getService(Service.AccessoryInformation)
       .setCharacteristic(Characteristic.Manufacturer, "TCC")
@@ -152,7 +164,7 @@ function TccAccessory(that, device, hbValues) {
       .setProps({
         validValues: hbValues.TargetHeatingCoolingStateValidValues
       })
-      .on('set', setTargetHeatingCooling.bind(this));
+      .on('set', setTargetHeatingCooling.bind(this.accessory));
 
     this.accessory
       .getService(Service.Thermostat)
@@ -170,7 +182,7 @@ function TccAccessory(that, device, hbValues) {
         minValue: hbValues.TargetTemperatureHeatMinValue,
         maxValue: hbValues.TargetTemperatureCoolMaxValue
       })
-      .on('set', setTargetTemperature.bind(this));
+      .on('set', setTargetTemperature.bind(this.accessory));
 
     if (this.device.UI.CanSetSwitchAuto) {
       // Only available on models with an Auto Mode
@@ -181,7 +193,7 @@ function TccAccessory(that, device, hbValues) {
           minValue: hbValues.TargetTemperatureHeatMinValue,
           maxValue: hbValues.TargetTemperatureHeatMaxValue
         })
-        .on('set', this.setCoolingThresholdTemperature.bind(this));
+        .on('set', this.setCoolingThresholdTemperature.bind(this.accessory));
 
       // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
       this.accessory
@@ -191,7 +203,7 @@ function TccAccessory(that, device, hbValues) {
           minValue: hbValues.TargetTemperatureCoolMinValue,
           maxValue: hbValues.TargetTemperatureCoolMaxValue
         })
-        .on('set', this.setHeatingThresholdTemperature.bind(this));
+        .on('set', this.setHeatingThresholdTemperature.bind(this.accessory));
     }
 
     this.accessory
@@ -218,13 +230,13 @@ function TccAccessory(that, device, hbValues) {
   }
 }
 
-TccAccessory.prototype = {
-};
+TccAccessory.prototype = {};
 
 function setTargetTemperature(value, callback) {
   this.log("Setting target temperature for", this.displayName, "to", value + "°");
+  // debug("this", this);
   thermostats.setTargetTemperature(this, value, function(err) {
-    pollDevices.call(this);
+    // pollDevices.call(this);
     callback(err);
   }.bind(this));
 }
@@ -232,7 +244,7 @@ function setTargetTemperature(value, callback) {
 function setTargetHeatingCooling(value, callback) {
   this.log("Setting switch for", this.displayName, "to", value);
   thermostats.setTargetHeatingCooling(this, value, function(err) {
-    pollDevices.call(this);
+    // pollDevices.call(this);
     callback(err);
   }.bind(this));
 }
