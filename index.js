@@ -94,8 +94,8 @@ function pollDevices() {
   // debug("pollDevices - thermo", thermostats);
   thermostats.poll(function(err, devices) {
     if (err) {
-      if (err.messages) {
-        this.log("ERROR: pollDevices", err.messages);
+      if (err.message) {
+        this.log("ERROR: pollDevices", err.message);
       } else {
         this.log("ERROR: pollDevices", err);
       }
