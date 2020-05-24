@@ -94,12 +94,23 @@ function pollDevices() {
   // debug("pollDevices - thermo", thermostats);
   thermostats.poll(function(err, devices) {
     if (err) {
-      this.log("ERROR: pollDevices", err.messages);
+      if (err.messages) {
+        this.log("ERROR: pollDevices", err.messages);
+      } else {
+        this.log("ERROR: pollDevices", err);
+      }
     } else {
       myAccessories.forEach(function(accessory) {
         debug("pollDevices - updateStatus", accessory.displayName);
-        updateStatus(accessory, devices.hb[accessory.context.ThermostatID]);
-      });
+        if (devices.hb[accessory.context.ThermostatID]) {
+          updateStatus(accessory, devices.hb[accessory.context.ThermostatID]);
+        } else {
+          this.log("ERROR: no data for", accessory.displayName);
+          // debug("accessory", accessory);
+          accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
+            .updateValue(new Error("Status missing for thermostat"));
+        }
+      }.bind(this));
     }
   }.bind(this));
 }
@@ -161,7 +172,9 @@ function TccAccessory(that, device, hbValues) {
     this.accessory
       .getService(Service.Thermostat)
       .getCharacteristic(Characteristic.TargetHeatingCoolingState)
-      .setProps({ validValues: hbValues.TargetHeatingCoolingStateValidValues })
+      .setProps({
+        validValues: hbValues.TargetHeatingCoolingStateValidValues
+      })
       .on('set', setTargetHeatingCooling.bind(this.accessory));
 
     this.accessory
@@ -177,7 +190,10 @@ function TccAccessory(that, device, hbValues) {
     this.accessory
       .getService(Service.Thermostat)
       .getCharacteristic(Characteristic.TargetTemperature)
-      .setProps({ minValue: parseInt(hbValues.TargetTemperatureHeatMinValue), maxValue: parseInt(hbValues.TargetTemperatureCoolMaxValue) })
+      .setProps({
+        minValue: hbValues.TargetTemperatureHeatMinValue,
+        maxValue: hbValues.TargetTemperatureCoolMaxValue
+      })
       .on('set', setTargetTemperature.bind(this.accessory));
 
     if (this.device.UI.CanSetSwitchAuto) {
@@ -186,8 +202,8 @@ function TccAccessory(that, device, hbValues) {
         .getService(Service.Thermostat)
         .getCharacteristic(Characteristic.CoolingThresholdTemperature)
         .setProps({
-          minValue: parseInt(hbValues.TargetTemperatureHeatMinValue),
-          maxValue: parseInt(hbValues.TargetTemperatureHeatMaxValue)
+          minValue: hbValues.TargetTemperatureHeatMinValue,
+          maxValue: hbValues.TargetTemperatureHeatMaxValue
         })
         .on('set', this.setCoolingThresholdTemperature.bind(this.accessory));
 
@@ -196,8 +212,8 @@ function TccAccessory(that, device, hbValues) {
         .getService(Service.Thermostat)
         .getCharacteristic(Characteristic.HeatingThresholdTemperature)
         .setProps({
-          minValue: parseInt(hbValues.TargetTemperatureCoolMinValue),
-          maxValue: parseInt(hbValues.TargetTemperatureCoolMaxValue)
+          minValue: hbValues.TargetTemperatureCoolMinValue,
+          maxValue: hbValues.TargetTemperatureCoolMaxValue
         })
         .on('set', this.setHeatingThresholdTemperature.bind(this.accessory));
     }
