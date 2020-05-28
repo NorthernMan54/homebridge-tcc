@@ -81,10 +81,25 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
       .getCharacteristic(Characteristic.TargetHeatingCoolingState)
       .on('set', setTargetHeatingCooling.bind(accessory));
 
-    accessory
+    if (accessory
       .getService(Service.Thermostat)
-      .getCharacteristic(Characteristic.TargetTemperature)
-      .on('set', setTargetTemperature.bind(accessory));
+      .getCharacteristic(Characteristic.TargetHeatingCoolingState).props.validValues.includes(3)) {
+      accessory
+        .getService(Service.Thermostat)
+        .getCharacteristic(Characteristic.CoolingThresholdTemperature)
+        .on('set', setCoolingThresholdTemperature.bind(accessory));
+
+      // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
+      accessory
+        .getService(Service.Thermostat)
+        .getCharacteristic(Characteristic.HeatingThresholdTemperature)
+        .on('set', setHeatingThresholdTemperature.bind(accessory));
+    } else {
+      accessory
+        .getService(Service.Thermostat)
+        .getCharacteristic(Characteristic.TargetTemperature)
+        .on('set', setTargetTemperature.bind(accessory));
+    }
   }
 
   myAccessories.push(accessory);
@@ -119,7 +134,7 @@ function updateStatus(accessory, device) {
   var service = accessory.getService(Service.Thermostat);
   // debug("updateStatus", accessory.displayName);
   // debug("updateStatus - device", device);
-  // accessory.context.device = device.device;
+  // accessory.context.device = device;
   service.getCharacteristic(Characteristic.TargetTemperature)
     .updateValue(device.TargetTemperature);
   service.getCharacteristic(Characteristic.CurrentTemperature)
@@ -128,6 +143,10 @@ function updateStatus(accessory, device) {
     .updateValue(device.CurrentHeatingCoolingState);
   service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
     .updateValue(device.TargetHeatingCoolingState);
+  service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
+    .updateValue(device.CoolSetpoint);
+  service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
+    .updateValue(device.HeatSetpoint);
 }
 
 function TccAccessory(that, device, hbValues) {
@@ -185,37 +204,34 @@ function TccAccessory(that, device, hbValues) {
         maxValue: 100
       });
 
-    // this.addCharacteristic(Characteristic.TargetTemperature); READ WRITE
-    //       .setProps({minValue: hbValues.TargetTemperatureHeatMinValue,maxValue: hbValues.TargetTemperatureCoolMaxValue})
-    this.accessory
-      .getService(Service.Thermostat)
-      .getCharacteristic(Characteristic.TargetTemperature)
-      .setProps({
-        minValue: hbValues.TargetTemperatureHeatMinValue,
-        maxValue: hbValues.TargetTemperatureCoolMaxValue
-      })
-      .on('set', setTargetTemperature.bind(this.accessory));
-
     if (this.device.UI.CanSetSwitchAuto) {
       // Only available on models with an Auto Mode
       this.accessory
         .getService(Service.Thermostat)
         .getCharacteristic(Characteristic.CoolingThresholdTemperature)
         .setProps({
-          minValue: hbValues.TargetTemperatureHeatMinValue,
-          maxValue: hbValues.TargetTemperatureHeatMaxValue
+          minValue: hbValues.TargetTemperatureCoolMinValue,
+          maxValue: hbValues.TargetTemperatureCoolMaxValue
         })
-        .on('set', this.setCoolingThresholdTemperature.bind(this.accessory));
+        .on('set', setCoolingThresholdTemperature.bind(this.accessory));
 
       // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
       this.accessory
         .getService(Service.Thermostat)
         .getCharacteristic(Characteristic.HeatingThresholdTemperature)
         .setProps({
-          minValue: hbValues.TargetTemperatureCoolMinValue,
-          maxValue: hbValues.TargetTemperatureCoolMaxValue
+          minValue: hbValues.TargetTemperatureHeatMinValue,
+          maxValue: hbValues.TargetTemperatureHeatMaxValue
         })
-        .on('set', this.setHeatingThresholdTemperature.bind(this.accessory));
+        .on('set', setHeatingThresholdTemperature.bind(this.accessory));
+    } else {
+      this.accessory
+        .getService(Service.Thermostat)
+        .getCharacteristic(Characteristic.TargetHeatingCoolingState)
+        .setProps({
+          validValues: hbValues.TargetHeatingCoolingStateValidValues
+        })
+        .on('set', setTargetHeatingCooling.bind(this.accessory));
     }
 
     this.accessory
@@ -256,6 +272,22 @@ function setTargetTemperature(value, callback) {
 function setTargetHeatingCooling(value, callback) {
   this.log("Setting switch for", this.displayName, "to", value);
   thermostats.setTargetHeatingCooling(this, value, function(err) {
+    // pollDevices.call(this);
+    callback(err);
+  }.bind(this));
+}
+
+function setHeatingThresholdTemperature(value, callback) {
+  this.log("Setting HeatingThreshold for", this.displayName, "to", value);
+  thermostats.setHeatCoolSetPoint(this, value, null, function(err) {
+    // pollDevices.call(this);
+    callback(err);
+  }.bind(this));
+}
+
+function setCoolingThresholdTemperature(value, callback) {
+  this.log("Setting CoolingThreshold for", this.displayName, "to", value);
+  thermostats.setHeatCoolSetPoint(this, null, value, function(err) {
     // pollDevices.call(this);
     callback(err);
   }.bind(this));
