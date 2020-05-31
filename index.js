@@ -261,18 +261,20 @@ TccAccessory.prototype = {};
 function setTargetTemperature(value, callback) {
   this.log("Setting target temperature for", this.displayName, "to", value + "°");
   // debug("this", this);
-  thermostats.setTargetTemperature(this, value, function(err) {
-    // pollDevices.call(this);
-    callback(err);
-  }.bind(this));
+  thermostats.ChangeThermostat(this, { TargetTemperature: value }).then(() => {
+    callback();
+  }).catch((error) => {
+    callback(error);
+  });
 }
 
 function setTargetHeatingCooling(value, callback) {
   this.log("Setting switch for", this.displayName, "to", value);
-  thermostats.setTargetHeatingCooling(this, value, function(err) {
-    // pollDevices.call(this);
-    callback(err);
-  }.bind(this));
+  thermostats.ChangeThermostat(this, { TargetHeatingCooling: value }).then(() => {
+    callback();
+  }).catch((error) => {
+    callback(error);
+  });
 }
 
 function setHeatingThresholdTemperature(value, callback) {
