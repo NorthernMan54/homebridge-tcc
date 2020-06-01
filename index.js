@@ -126,6 +126,8 @@ function pollDevices() {
 function updateStatus(accessory, device) {
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Name)
     .updateValue(device.UserDefinedDeviceName);
+  accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Model)
+    .updateValue(device.Model);
   var service = accessory.getService(Service.Thermostat);
   // debug("updateStatus", accessory.displayName);
   // debug("updateStatus - device", device);
@@ -167,6 +169,7 @@ function TccAccessory(that, device, hbValues) {
 
     this.accessory.getService(Service.AccessoryInformation)
       .setCharacteristic(Characteristic.Manufacturer, "TCC")
+      .setCharacteristic(Characteristic.Model, device.Model)
       .setCharacteristic(Characteristic.SerialNumber, hostname + "-" + this.name)
       .setCharacteristic(Characteristic.FirmwareRevision, require('./package.json').version);
 
@@ -245,7 +248,9 @@ TccAccessory.prototype = {};
 function setTargetTemperature(value, callback) {
   this.log("Setting target temperature for", this.displayName, "to", value + "°");
   // debug("this", this);
-  thermostats.ChangeThermostat(this, { TargetTemperature: value }).then((thermostat) => {
+  thermostats.ChangeThermostat(this, {
+    TargetTemperature: value
+  }).then((thermostat) => {
     // debug("setTargetTemperature", this, thermostat);
     updateStatus(this, thermostat);
     callback(null, value);
@@ -256,7 +261,9 @@ function setTargetTemperature(value, callback) {
 
 function setTargetHeatingCooling(value, callback) {
   this.log("Setting switch for", this.displayName, "to", value);
-  thermostats.ChangeThermostat(this, { TargetHeatingCooling: value }).then((thermostat) => {
+  thermostats.ChangeThermostat(this, {
+    TargetHeatingCooling: value
+  }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
     updateStatus(this, thermostat);
     callback(null, value);
