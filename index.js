@@ -43,22 +43,18 @@ tccPlatform.prototype.didFinishLaunching = function() {
   this.log("didFinishLaunching");
 
   thermostats = new Tcc(this, function(err, devices) {
+    // debug("thermostats", thermostats);
     if (!err) {
       if (Array.isArray(devices.LocationInfo.Thermostats.ThermostatInfo)) {
         for (var zone in devices.LocationInfo.Thermostats.ThermostatInfo) {
-          // debug("TBD - zone", zone);
-          // debug("TBD - Ther", devices.LocationInfo.Thermostats.ThermostatInfo[zone]);
 
-          debug("Creating accessory for", devices.LocationInfo.Thermostats.ThermostatInfo[zone].DeviceName);
+          debug("Creating accessory for", devices.LocationInfo.Thermostats.ThermostatInfo[zone].UserDefinedDeviceName);
           // debug("123", devices.hb);
           var newAccessory = new TccAccessory(this, devices.LocationInfo.Thermostats.ThermostatInfo[zone], devices.hb[devices.LocationInfo.Thermostats.ThermostatInfo[zone].ThermostatID]);
           updateStatus(newAccessory, devices.hb[devices.LocationInfo.Thermostats.ThermostatInfo[zone].ThermostatID]);
         }
       } else {
-        // debug("TBD - zone", zone);
-        // debug("TBD - Ther", devices.LocationInfo.Thermostats.ThermostatInfo);
-
-        debug("Creating accessory for", devices.LocationInfo.Thermostats.ThermostatInfo.DeviceName);
+        debug("Creating accessory for", devices.LocationInfo.Thermostats.ThermostatInfo.UserDefinedDeviceName);
         // debug("123", devices.hb);
         var newAccessory = new TccAccessory(this, devices.LocationInfo.Thermostats.ThermostatInfo, devices.hb[devices.LocationInfo.Thermostats.ThermostatInfo.ThermostatID]);
         updateStatus(newAccessory, devices.hb[devices.LocationInfo.Thermostats.ThermostatInfo.ThermostatID]);
@@ -81,11 +77,6 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
       .getCharacteristic(Characteristic.TargetHeatingCoolingState)
       .on('set', setTargetHeatingCooling.bind(accessory));
 
-    /*
-    if (accessory
-      .getService(Service.Thermostat)
-      .getCharacteristic(Characteristic.TargetHeatingCoolingState).props.validValues.includes(3)) {
-        */
     accessory
       .getService(Service.Thermostat)
       .getCharacteristic(Characteristic.CoolingThresholdTemperature)
@@ -133,10 +124,14 @@ function pollDevices() {
 }
 
 function updateStatus(accessory, device) {
+  accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Name)
+    .updateValue(device.UserDefinedDeviceName);
   var service = accessory.getService(Service.Thermostat);
   // debug("updateStatus", accessory.displayName);
   // debug("updateStatus - device", device);
   // accessory.context.device = device;
+  service.getCharacteristic(Characteristic.Name)
+    .updateValue(device.UserDefinedDeviceName);
   service.getCharacteristic(Characteristic.TargetTemperature)
     .updateValue(device.TargetTemperature);
   service.getCharacteristic(Characteristic.CurrentTemperature)
@@ -154,7 +149,7 @@ function updateStatus(accessory, device) {
 function TccAccessory(that, device, hbValues) {
   this.log = that.log;
   // this.log("Adding TCC Device", device.DeviceName);
-  this.name = device.DeviceName;
+  this.name = device.UserDefinedDeviceName;
   this.ThermostatID = device.ThermostatID;
   this.device = device;
   this.usePermanentHolds = that.usePermanentHolds;
@@ -162,7 +157,7 @@ function TccAccessory(that, device, hbValues) {
 
   var uuid = UUIDGen.generate(this.name);
 
-  if (!getAccessoryByName(this.name)) {
+  if (!getAccessoryByThermostatID(this.ThermostatID)) {
     this.log("Adding TCC Device", this.name);
     this.accessory = new Accessory(this.name, uuid, 10);
     this.accessory.log = that.log;
@@ -176,17 +171,6 @@ function TccAccessory(that, device, hbValues) {
       .setCharacteristic(Characteristic.FirmwareRevision, require('./package.json').version);
 
     this.accessory.addService(Service.Thermostat, this.name);
-    // this.accessory.getService(Service.Thermostat).isPrimaryService = true;
-
-    // Information Service
-    var informationService = new Service.AccessoryInformation();
-
-    informationService
-      .setCharacteristic(Characteristic.Manufacturer, "TCC")
-      .setCharacteristic(Characteristic.SerialNumber, hostname + "-" + this.deviceID)
-      .setCharacteristic(Characteristic.FirmwareRevision, require('./package.json').version);
-    // Thermostat Service
-    this.thermostatService = new Service.Thermostat(this.name);
 
     // debug("HB", this.device, this.ThermostatID);
     //       .setProps({validValues: hbValues.TargetHeatingCoolingStateValidValues})
@@ -252,7 +236,7 @@ function TccAccessory(that, device, hbValues) {
     return this.accessory;
   } else {
     this.log("Existing TCC accessory", this.name);
-    return getAccessoryByName(this.name);
+    return getAccessoryByThermostatID(this.ThermostatID);
   }
 }
 
@@ -261,8 +245,10 @@ TccAccessory.prototype = {};
 function setTargetTemperature(value, callback) {
   this.log("Setting target temperature for", this.displayName, "to", value + "°");
   // debug("this", this);
-  thermostats.ChangeThermostat(this, { TargetTemperature: value }).then(() => {
-    callback();
+  thermostats.ChangeThermostat(this, { TargetTemperature: value }).then((thermostat) => {
+    // debug("setTargetTemperature", this, thermostat);
+    updateStatus(this, thermostat);
+    callback(null, value);
   }).catch((error) => {
     callback(error);
   });
@@ -270,8 +256,10 @@ function setTargetTemperature(value, callback) {
 
 function setTargetHeatingCooling(value, callback) {
   this.log("Setting switch for", this.displayName, "to", value);
-  thermostats.ChangeThermostat(this, { TargetHeatingCooling: value }).then(() => {
-    callback();
+  thermostats.ChangeThermostat(this, { TargetHeatingCooling: value }).then((thermostat) => {
+    // debug("setTargetHeatingCooling", this, thermostat);
+    updateStatus(this, thermostat);
+    callback(null, value);
   }).catch((error) => {
     callback(error);
   });
@@ -298,6 +286,17 @@ function getAccessoryByName(name) {
   myAccessories.forEach(function(accessory) {
     // debug("getAccessoryByName zone", accessory.name, name);
     if (accessory.displayName === name) {
+      value = accessory;
+    }
+  });
+  return value;
+}
+
+function getAccessoryByThermostatID(ThermostatID) {
+  var value;
+  myAccessories.forEach(function(accessory) {
+    // debug("getAccessoryByName zone", accessory.name, name);
+    if (accessory.context.ThermostatID === ThermostatID) {
       value = accessory;
     }
   });
