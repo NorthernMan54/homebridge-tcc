@@ -190,14 +190,23 @@ function TccAccessory(that, device, hbValues) {
         maxValue: 100
       });
 
+    this.accessory
+      .getService(Service.Thermostat)
+      .getCharacteristic(Characteristic.TargetTemperature)
+      .setProps({
+        minValue: parseFloat(hbValues.TargetTemperatureHeatMinValue),
+        maxValue: parseFloat(hbValues.TargetTemperatureCoolMaxValue)
+      })
+      .on('set', setTargetTemperature.bind(this.accessory));
+
     // if (this.device.UI.CanSetSwitchAuto) {
     // Only available on models with an Auto Mode
     this.accessory
       .getService(Service.Thermostat)
       .getCharacteristic(Characteristic.CoolingThresholdTemperature)
       .setProps({
-        minValue: hbValues.TargetTemperatureCoolMinValue,
-        maxValue: hbValues.TargetTemperatureCoolMaxValue
+        minValue: parseFloat(hbValues.TargetTemperatureCoolMinValue),
+        maxValue: parseFloat(hbValues.TargetTemperatureCoolMaxValue)
       })
       .on('set', setCoolingThresholdTemperature.bind(this.accessory));
 
@@ -206,20 +215,10 @@ function TccAccessory(that, device, hbValues) {
       .getService(Service.Thermostat)
       .getCharacteristic(Characteristic.HeatingThresholdTemperature)
       .setProps({
-        minValue: hbValues.TargetTemperatureHeatMinValue,
-        maxValue: hbValues.TargetTemperatureHeatMaxValue
+        minValue: parseFloat(hbValues.TargetTemperatureHeatMinValue),
+        maxValue: parseFloat(hbValues.TargetTemperatureHeatMaxValue)
       })
       .on('set', setHeatingThresholdTemperature.bind(this.accessory));
-    // }
-
-    this.accessory
-      .getService(Service.Thermostat)
-      .getCharacteristic(Characteristic.TargetTemperature)
-      .setProps({
-        minValue: hbValues.TargetTemperatureHeatMinValue,
-        maxValue: hbValues.TargetTemperatureCoolMaxValue
-      })
-      .on('set', setTargetTemperature.bind(this.accessory));
 
     this.accessory
       .getService(Service.Thermostat).log = this.log;
