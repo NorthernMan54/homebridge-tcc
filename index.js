@@ -129,9 +129,6 @@ function updateStatus(accessory, device) {
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Model)
     .updateValue(device.Model);
   var service = accessory.getService(Service.Thermostat);
-  // debug("updateStatus", accessory.displayName);
-  // debug("updateStatus - device", device);
-  // accessory.context.device = device;
   service.getCharacteristic(Characteristic.Name)
     .updateValue(device.UserDefinedDeviceName);
   service.getCharacteristic(Characteristic.TargetTemperature)
@@ -213,10 +210,15 @@ function TccAccessory(that, device, hbValues) {
         maxValue: hbValues.TargetTemperatureHeatMaxValue
       })
       .on('set', setHeatingThresholdTemperature.bind(this.accessory));
+    // }
 
     this.accessory
       .getService(Service.Thermostat)
       .getCharacteristic(Characteristic.TargetTemperature)
+      .setProps({
+        minValue: hbValues.TargetTemperatureHeatMinValue,
+        maxValue: hbValues.TargetTemperatureCoolMaxValue
+      })
       .on('set', setTargetTemperature.bind(this.accessory));
 
     this.accessory
@@ -273,30 +275,29 @@ function setTargetHeatingCooling(value, callback) {
 }
 
 function setHeatingThresholdTemperature(value, callback) {
-  this.log("Setting HeatingThreshold for", this.displayName, "to", value);
-  thermostats.setHeatCoolSetPoint(this, value, null, function(err) {
-    // pollDevices.call(this);
-    callback(err);
-  }.bind(this));
+  this.log("Setting HeatingThresholdTemperature for", this.displayName, "to", value);
+  thermostats.ChangeThermostat(this, {
+    HeatingThresholdTemperature: value
+  }).then((thermostat) => {
+    // debug("setTargetHeatingCooling", this, thermostat);
+    updateStatus(this, thermostat);
+    callback(null, value);
+  }).catch((error) => {
+    callback(error);
+  });
 }
 
 function setCoolingThresholdTemperature(value, callback) {
-  this.log("Setting CoolingThreshold for", this.displayName, "to", value);
-  thermostats.setHeatCoolSetPoint(this, null, value, function(err) {
-    // pollDevices.call(this);
-    callback(err);
-  }.bind(this));
-}
-
-function getAccessoryByName(name) {
-  var value;
-  myAccessories.forEach(function(accessory) {
-    // debug("getAccessoryByName zone", accessory.name, name);
-    if (accessory.displayName === name) {
-      value = accessory;
-    }
+  this.log("Setting CoolingThresholdTemperature for", this.displayName, "to", value);
+  thermostats.ChangeThermostat(this, {
+    CoolingThresholdTemperature: value
+  }).then((thermostat) => {
+    // debug("setTargetHeatingCooling", this, thermostat);
+    updateStatus(this, thermostat);
+    callback(null, value);
+  }).catch((error) => {
+    callback(error);
   });
-  return value;
 }
 
 function getAccessoryByThermostatID(ThermostatID) {

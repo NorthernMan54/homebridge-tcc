@@ -46,10 +46,6 @@ Plugin will discover your thermostats and create one for each connected to your 
 * `storage` - Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs
 * `usePermanentHolds` - If set to `true`, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to `false`, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off.
 
-# Roadmap
-
-- Need to add throttling around temperature changes
-
 # Credits
 
 - luc-ass - Borrowed your homebridge-evohome plugin as a base to start from
