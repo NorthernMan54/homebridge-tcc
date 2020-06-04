@@ -186,8 +186,8 @@ function TccAccessory(that, device) {
       .getService(Service.Thermostat)
       .getCharacteristic(Characteristic.TargetTemperature)
       .setProps({
-        minValue: device.TargetTemperatureHeatMinValue,
-        maxValue: device.TargetTemperatureCoolMaxValue
+        minValue: parseFloat(device.TargetTemperatureHeatMinValue),
+        maxValue: parseFloat(device.TargetTemperatureCoolMaxValue)
       })
       .on('set', setTargetTemperature.bind(this.accessory));
 
@@ -197,8 +197,8 @@ function TccAccessory(that, device) {
       .getService(Service.Thermostat)
       .getCharacteristic(Characteristic.CoolingThresholdTemperature)
       .setProps({
-        minValue: device.TargetTemperatureCoolMinValue,
-        maxValue: device.TargetTemperatureCoolMaxValue
+        minValue: parseFloat(device.TargetTemperatureCoolMinValue),
+        maxValue: parseFloat(device.TargetTemperatureCoolMaxValue)
       })
       .on('set', setCoolingThresholdTemperature.bind(this.accessory));
 
@@ -207,8 +207,8 @@ function TccAccessory(that, device) {
       .getService(Service.Thermostat)
       .getCharacteristic(Characteristic.HeatingThresholdTemperature)
       .setProps({
-        minValue: device.TargetTemperatureHeatMinValue,
-        maxValue: device.TargetTemperatureHeatMaxValue
+        minValue: parseFloat(device.TargetTemperatureHeatMinValue),
+        maxValue: parseFloat(device.TargetTemperatureHeatMaxValue)
       })
       .on('set', setHeatingThresholdTemperature.bind(this.accessory));
 
