@@ -5,6 +5,8 @@
 This is a plugin for North America Honeywell Total Connect Comfort site. It is a partially-working
 implementation into HomeKit. This plugin is work in progress. Help is appreciated!  Please note it does not work with the International Honeywell Total Connect Comfort site. Historical display of temperature data is available via HomeKit apps thats support graphing.
 
+Plugin will discover your thermostats and create one for each connected to your TCC account.
+
 # Devices Tested With
 
 * RTH6580WF
@@ -29,38 +31,20 @@ implementation into HomeKit. This plugin is work in progress. Help is appreciate
             "name" : "Thermostat",
             "username" : ".....",
             "password" : ".....",
-            "devices" : [
-                  {"deviceID": "1234567", "name": "Other Floor", "usePermanentHolds": true},
-                  {"deviceID": "abcdefg", "name": "Main Floor", "usePermanentHolds": false}
-          	]
         }
     ]
 ```
 
 - platform: tcc
-- name: can be anything you want
+- name: can be anything you want, this is only used in the homebridge logs and is not the thermostat name
 - username: your Honeywell e-mail
 - password: your Honeywell password
-- deviceID: Your honeywell deviceID Go to the Honeywell Total Connect Comfort website, log in and open your
-device. Now look in the address bar and you will see something like:
-
-https://mytotalconnectcomfort.com/portal/Device/Control/1234567
-
-The last part is your Device ID.
 
 # Optional settings
 
 * `refresh` - Data polling interval in seconds, defaults to 60 seconds
 * `storage` - Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs
-* `usePermanentHolds` - Place in the `device` block correlated with your thermostat. If set to `true`, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to `false`, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off.
-
-# Roadmap
-
-- Need to add throttling around temperature changes
-
-# Notes
-
-It seems to be vitally important to set the right system time, especially on raspi!
+* `usePermanentHolds` - If set to `true`, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to `false`, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off.
 
 # Credits
 
@@ -72,4 +56,4 @@ It seems to be vitally important to set the right system time, especially on ras
 - gsulshski - Validation of TH6320WF
 - l3nticular - Support for Mode 7
 - simont77 - FakeGato History
-- @hakusaro - Added support for permanent temperature holds.
+- hakusaro - Added support for permanent temperature holds.
