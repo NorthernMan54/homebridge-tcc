@@ -56,4 +56,4 @@ Plugin will discover your thermostats and create one for each connected to your 
 - gsulshski - Validation of TH6320WF
 - l3nticular - Support for Mode 7
 - simont77 - FakeGato History
-- @hakusaro - Added support for permanent temperature holds.
+- hakusaro - Added support for permanent temperature holds.
