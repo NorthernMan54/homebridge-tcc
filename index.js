@@ -137,7 +137,7 @@ function updateStatus(accessory, device) {
     .updateValue(device.HeatingThresholdTemperature);
   // Fakegato Support
   accessory.context.logEventCounter++;
-  if (!(accessory.context.loggingService % 10)) {
+  if (!(accessory.context.logEventCounter % 10)) {
     accessory.loggingService.addEntry({
       time: moment().unix(),
       currentTemp: device.CurrentTemperature,
@@ -247,6 +247,7 @@ function TccAccessory(that, device) {
 
 function setTargetTemperature(value, callback) {
   this.log("Setting target temperature for", this.displayName, "to", value + "°");
+  this.context.logEventCounter = 9;
   // debug("this", this);
   thermostats.ChangeThermostat(this, {
     TargetTemperature: value
@@ -261,6 +262,7 @@ function setTargetTemperature(value, callback) {
 
 function setTargetHeatingCooling(value, callback) {
   this.log("Setting switch for", this.displayName, "to", value);
+  this.context.logEventCounter = 9;
   thermostats.ChangeThermostat(this, {
     TargetHeatingCooling: value
   }).then((thermostat) => {
