@@ -42,20 +42,17 @@ function tccPlatform(log, config, api) {
 tccPlatform.prototype.didFinishLaunching = function() {
   this.log("didFinishLaunching");
 
-  thermostats = new Tcc(this, function(err, devices) {
-    // debug("thermostats", devices);
-    if (!err) {
-      for (var zone in devices.hb) {
-        debug("Creating accessory for", devices.hb[zone].Name);
-        // debug("123", devices.hb);
-        var newAccessory = new TccAccessory(this, devices.hb[zone]);
-        updateStatus(newAccessory, devices.hb[zone]);
-      }
-    } else {
-      this.log(err.message);
+  thermostats = new Tcc(this);
+  thermostats.pollThermostat().then((devices) => {
+    for (var zone in devices.hb) {
+      debug("Creating accessory for", devices.hb[zone].Name);
+      var newAccessory = new TccAccessory(this, devices.hb[zone]);
+      updateStatus(newAccessory, devices.hb[zone]);
     }
-  }.bind(this));
-
+  }).catch((err) => {
+    this.log("Critical Error - No devices created, please restart.");
+    this.log(err.message);
+  });
   setInterval(pollDevices.bind(this), this.refresh * 1000); // Poll every minute
 };
 
@@ -91,28 +88,25 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
 };
 
 function pollDevices() {
-  // debug("pollDevices - thermo", thermostats);
-  thermostats.poll(function(err, devices) {
-    if (err) {
-      if (err.message) {
-        this.log("ERROR: pollDevices", err.message);
+  thermostats.pollThermostat().then((devices) => {
+    myAccessories.forEach(function(accessory) {
+      debug("pollDevices - updateStatus", accessory.displayName);
+      if (devices.hb[accessory.context.ThermostatID]) {
+        updateStatus(accessory, devices.hb[accessory.context.ThermostatID]);
       } else {
-        this.log("ERROR: pollDevices", err);
+        this.log("ERROR: no data for", accessory.displayName);
+        // debug("accessory", accessory);
+        accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
+          .updateValue(new Error("Status missing for thermostat"));
       }
+    }.bind(this));
+  }).catch((err) => {
+    if (err.message) {
+      this.log("ERROR: pollDevices", err.message);
     } else {
-      myAccessories.forEach(function(accessory) {
-        debug("pollDevices - updateStatus", accessory.displayName);
-        if (devices.hb[accessory.context.ThermostatID]) {
-          updateStatus(accessory, devices.hb[accessory.context.ThermostatID]);
-        } else {
-          this.log("ERROR: no data for", accessory.displayName);
-          // debug("accessory", accessory);
-          accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
-            .updateValue(new Error("Status missing for thermostat"));
-        }
-      }.bind(this));
+      this.log("ERROR: pollDevices", err);
     }
-  }.bind(this));
+  });
 }
 
 function updateStatus(accessory, device) {
