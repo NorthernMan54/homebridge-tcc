@@ -6,9 +6,9 @@ var Accessory, Service, Characteristic, UUIDGen, FakeGatoHistoryService, CustomC
 var os = require("os");
 var hostname = os.hostname();
 var Tcc = require('./lib/tcc.js').tcc;
+const moment = require('moment');
 
 var myAccessories = [];
-var refresh, storage;
 var thermostats;
 
 module.exports = function(homebridge) {
@@ -31,7 +31,7 @@ function tccPlatform(log, config, api) {
   this.usePermanentHolds = config['usePermanentHolds'] || false;
   this.log = log;
   this.devices = config['devices'];
-  storage = config['storage'] || "fs";
+  this.storage = config['storage'] || "fs";
 
   if (api) {
     this.api = api;
@@ -82,6 +82,12 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
       .getCharacteristic(Characteristic.TargetTemperature)
       .on('set', setTargetTemperature.bind(accessory));
     //  }
+    debug("FakeGatoHistoryService", this.storage, this.refresh);
+    accessory.context.logEventCounter = 9; // Update fakegato on startup
+    accessory.loggingService = new FakeGatoHistoryService("thermo", accessory, {
+      storage: this.storage,
+      minutes: this.refresh * 10 / 60
+    });
   }
 
   myAccessories.push(accessory);
@@ -129,6 +135,17 @@ function updateStatus(accessory, device) {
     .updateValue(device.CoolingThresholdTemperature);
   service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
     .updateValue(device.HeatingThresholdTemperature);
+  // Fakegato Support
+  accessory.context.logEventCounter++;
+  if (!(accessory.context.loggingService % 10)) {
+    accessory.loggingService.addEntry({
+      time: moment().unix(),
+      currentTemp: device.CurrentTemperature,
+      setTemp: device.TargetTemperature,
+      valvePosition: device.CurrentHeatingCoolingState
+    });
+    accessory.context.logEventCounter = 0;
+  }
 }
 
 function TccAccessory(that, device) {
@@ -138,7 +155,8 @@ function TccAccessory(that, device) {
   this.ThermostatID = device.ThermostatID;
   this.device = device;
   this.usePermanentHolds = that.usePermanentHolds;
-  this.log_event_counter = 9; // Update fakegato on startup
+  this.storage = that.storage;
+  this.refresh = that.refresh;
 
   var uuid = UUIDGen.generate(this.name);
 
@@ -147,8 +165,7 @@ function TccAccessory(that, device) {
     this.accessory = new Accessory(this.name, uuid, 10);
     this.accessory.log = that.log;
     this.accessory.context.ThermostatID = device.ThermostatID;
-    // this.accessory.context.device = device.device;
-    // debug("TccAccessory-context", device);
+    this.accessory.context.logEventCounter = 9; // Update fakegato on startup
 
     this.accessory.getService(Service.AccessoryInformation)
       .setCharacteristic(Characteristic.Manufacturer, "TCC")
@@ -208,18 +225,16 @@ function TccAccessory(that, device) {
 
     this.accessory
       .getService(Service.Thermostat).log = this.log;
-    this.loggingService = new FakeGatoHistoryService("thermo", this.accessory
-      .getService(Service.Thermostat), {
-        storage: storage,
-        minutes: refresh * 10 / 60
-      });
+
+    this.accessory.loggingService = new FakeGatoHistoryService("thermo", this.accessory, {
+      storage: this.storage,
+      minutes: this.refresh * 10 / 60
+    });
 
     this.accessory
       .getService(Service.Thermostat).addCharacteristic(CustomCharacteristic.ValvePosition);
-    this.accessory
-      .getService(Service.Thermostat).addCharacteristic(CustomCharacteristic.ProgramCommand);
-    this.accessory
-      .getService(Service.Thermostat).addCharacteristic(CustomCharacteristic.ProgramData);
+    // this.accessory.getService(Service.Thermostat).addCharacteristic(CustomCharacteristic.ProgramCommand);
+    // this.accessory.getService(Service.Thermostat).addCharacteristic(CustomCharacteristic.ProgramData);
 
     that.api.registerPlatformAccessories("homebridge-tcc", "tcc", [this.accessory]);
     myAccessories.push(this.accessory);
