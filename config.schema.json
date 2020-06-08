@@ -2,8 +2,8 @@
   "pluginAlias": "tcc",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "<p align='center'><img width='250px' src='https://user-images.githubusercontent.com/3979615/71876008-d99d7400-3179-11ea-909b-9d2a3d1e670f.png'></p>\n\nThe **Homebridge Honeywell Home** plugin allows you to control your T5, T6 and T9 Honeywell Home thermostats from HomeKit. To get started link your Honeywell Home account using the button below.",
-  "footerDisplay": "Your Honeywell Home account has been linked. Please raise any issues on our [project page](https://github.com/homebridge-plugins/homebridge-honeywell-home/issues).",
+  "headerDisplay": "<p align='center'><img width='250px' src='https://user-images.githubusercontent.com/3979615/71876008-d99d7400-3179-11ea-909b-9d2a3d1e670f.png'></p>\n\nThe **Homebridge TCC** plugin allows you to control your North American Honeywell Total Comformt Connect thermostats from HomeKit. ",
+  "footerDisplay": "",
   "schema": {
     "type": "object",
     "properties": {
@@ -30,7 +30,7 @@
             "title": "Refresh Token",
             "type": "string",
             "required": false,
-            "description": "Data polling interval in seconds, defaults to 60 seconds"
+            "description": "Data polling interval in seconds, defaults to 15 minutes."
           },
           "storage": {
             "title": "Storage",
@@ -43,6 +43,12 @@
             "type": "string",
             "required": false,
             "description": "If set to true, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to false, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off."
+          },
+          "debug": {
+            "title": "Debug Logging",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable DEBUG logging for homebridge-tcc"
           }
     }
   },
@@ -63,7 +69,8 @@
         "items": [
           "refresh",
           "storage",
-          "usePermanentHolds"
+          "usePermanentHolds",
+          "debug"
         ]
       }
     ]

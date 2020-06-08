@@ -33,6 +33,20 @@ function tccPlatform(log, config, api) {
   this.devices = config['devices'];
   this.storage = config['storage'] || "fs";
 
+  // Enable config based DEBUG logging enable
+  this.debug = config['debug'] || false;
+  if (this.debug) {
+    let debugEnable = require('debug');
+    let namespaces = debugEnable.disable();
+
+    if (namespaces) {
+      namespaces = namespaces + ',tcc*';
+    } else {
+      namespaces = 'tcc*';
+    }
+    debugEnable.enable(namespaces);
+  }
+
   if (api) {
     this.api = api;
     this.api.on('didFinishLaunching', this.didFinishLaunching.bind(this));
