@@ -1,0 +1,70 @@
+{
+  "pluginAlias": "tcc",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "<p align='center'><img width='250px' src='https://user-images.githubusercontent.com/3979615/71876008-d99d7400-3179-11ea-909b-9d2a3d1e670f.png'></p>\n\nThe **Homebridge Honeywell Home** plugin allows you to control your T5, T6 and T9 Honeywell Home thermostats from HomeKit. To get started link your Honeywell Home account using the button below.",
+  "footerDisplay": "Your Honeywell Home account has been linked. Please raise any issues on our [project page](https://github.com/homebridge-plugins/homebridge-honeywell-home/issues).",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Name",
+        "default": "Thermostat",
+        "required": true,
+        "description": "Can be anything you want, this is only used in the homebridge logs and is not the thermostat name."
+      },
+      "username": {
+            "title": "Username",
+            "type": "string",
+            "required": true,
+            "description": "Your Honeywell E-mail."
+          },
+          "password": {
+            "title": "Password",
+            "type": "string",
+            "required": true,
+            "description": "Your Honeywell password."
+          },
+          "refresh": {
+            "title": "Refresh Token",
+            "type": "string",
+            "required": false,
+            "description": "Data polling interval in seconds, defaults to 60 seconds"
+          },
+          "storage": {
+            "title": "Storage",
+            "type": "string",
+            "required": false,
+            "description": "Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs."
+          },
+          "usePermanentHolds": {
+            "title": "Refresh Token",
+            "type": "string",
+            "required": false,
+            "description": "If set to true, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to false, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off."
+          }
+    }
+  },
+    "layout": [
+      {
+        "type": "fieldset",
+        "title": "Thermostat",
+        "items": [
+          "username",
+          "password"
+        ]
+      },
+      {
+        "type": "fieldset",
+        "title": "Optional Settings",
+        "expandable": true,
+        "expanded": false,
+        "items": [
+          "refresh",
+          "storage",
+          "usePermanentHolds"
+        ]
+      }
+    ]
+}
