@@ -36,15 +36,18 @@ function tccPlatform(log, config, api) {
   // Enable config based DEBUG logging enable
   this.debug = config['debug'] || false;
   if (this.debug) {
-    let debugEnable = require('debug');
-    let namespaces = debugEnable.disable();
+    debug.enable = true;
+    // let debugEnable = require('debug');
+    let namespaces = debug.disable();
 
+    // this.log("DEBUG-1", namespaces);
     if (namespaces) {
-      namespaces = namespaces + ',tcc*';
+      namespaces = namespaces + ',alexa*';
     } else {
-      namespaces = 'tcc*';
+      namespaces = 'alexa*';
     }
-    debugEnable.enable(namespaces);
+    // this.log("DEBUG-2", namespaces);
+    debug.enable(namespaces);
   }
 
   if (api) {
