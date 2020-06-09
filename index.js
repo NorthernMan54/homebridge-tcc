@@ -36,18 +36,7 @@ function tccPlatform(log, config, api) {
   // Enable config based DEBUG logging enable
   this.debug = config['debug'] || false;
   if (this.debug) {
-    debug.enable = true;
-    // let debugEnable = require('debug');
-    let namespaces = debug.disable();
-
-    // this.log("DEBUG-1", namespaces);
-    if (namespaces) {
-      namespaces = namespaces + ',alexa*';
-    } else {
-      namespaces = 'alexa*';
-    }
-    // this.log("DEBUG-2", namespaces);
-    debug.enable(namespaces);
+    debug.enabled = true;
   }
 
   if (api) {
