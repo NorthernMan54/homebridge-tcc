@@ -28,8 +28,10 @@
       },
       "refresh": {
         "title": "Refresh Token",
-        "type": "string",
-        "required": false,
+        "default": 900,
+        "type": "integer",
+        "minimum": 60,
+        "maximum": 3000,
         "description": "Data polling interval in seconds, defaults to 15 minutes."
       },
       "storage": {
