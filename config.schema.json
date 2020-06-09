@@ -15,63 +15,72 @@
         "description": "Can be anything you want, this is only used in the homebridge logs and is not the thermostat name."
       },
       "username": {
-            "title": "Username",
-            "type": "string",
-            "required": true,
-            "description": "Your Honeywell E-mail."
+        "title": "Username",
+        "type": "string",
+        "required": true,
+        "description": "Your Honeywell E-mail."
+      },
+      "password": {
+        "title": "Password",
+        "type": "string",
+        "required": true,
+        "description": "Your Honeywell password."
+      },
+      "refresh": {
+        "title": "Refresh Token",
+        "type": "string",
+        "required": false,
+        "description": "Data polling interval in seconds, defaults to 15 minutes."
+      },
+      "storage": {
+        "title": "Storage",
+        "type": "string",
+        "required": false,
+        "description": "Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs.",
+        "default": "fs",
+        "oneOf": [{
+            "title": "File System",
+            "enum": ["fs"]
           },
-          "password": {
-            "title": "Password",
-            "type": "string",
-            "required": true,
-            "description": "Your Honeywell password."
-          },
-          "refresh": {
-            "title": "Refresh Token",
-            "type": "string",
-            "required": false,
-            "description": "Data polling interval in seconds, defaults to 15 minutes."
-          },
-          "storage": {
-            "title": "Storage",
-            "type": "string",
-            "required": false,
-            "description": "Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs."
-          },
-          "usePermanentHolds": {
-            "title": "usePermanentHolds",
-            "type": "boolean",
-            "required": false,
-            "description": "If set to true, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to false, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off."
-          },
-          "debug": {
-            "title": "Debug Logging",
-            "type": "boolean",
-            "required": false,
-            "description": "Enable DEBUG logging for homebridge-tcc"
+          {
+            "title": "Google Drive",
+            "enum": ["googleDrive"]
           }
-    }
-  },
-    "layout": [
-      {
-        "type": "fieldset",
-        "title": "Thermostat",
-        "items": [
-          "username",
-          "password"
         ]
       },
-      {
-        "type": "fieldset",
-        "title": "Optional Settings",
-        "expandable": true,
-        "expanded": false,
-        "items": [
-          "refresh",
-          "storage",
-          "usePermanentHolds",
-          "debug"
-        ]
+      "usePermanentHolds": {
+        "title": "usePermanentHolds",
+        "type": "boolean",
+        "required": false,
+        "description": "If set to true, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to false, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off."
+      },
+      "debug": {
+        "title": "Debug Logging",
+        "type": "boolean",
+        "required": false,
+        "description": "Enable DEBUG logging for homebridge-tcc"
       }
-    ]
+    }
+  },
+  "layout": [{
+      "type": "fieldset",
+      "title": "Thermostat",
+      "items": [
+        "username",
+        "password"
+      ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Optional Settings",
+      "expandable": true,
+      "expanded": false,
+      "items": [
+        "refresh",
+        "storage",
+        "usePermanentHolds",
+        "debug"
+      ]
+    }
+  ]
 }
