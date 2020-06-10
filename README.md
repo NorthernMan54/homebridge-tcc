@@ -22,6 +22,16 @@ Plugin will discover your thermostats and create one for each connected to your 
 2. Install this plugin using npm install -g homebridge-tcc
 3. Update your configuration file. See sample-config below for a sample.
 
+## On Windows platforms
+
+Please ensure the node-gyp is properly configured for use prior to installing.  Error messages like this may appear during installtion if not.
+
+```
+gyp ERR! find Python Python is not set from command line or npm configuration
+```
+
+To resolve the issue, please follow the steps here. https://github.com/nodejs/node-gyp#on-windows
+
 # Configuration Sample
 
 ```
@@ -45,6 +55,7 @@ Plugin will discover your thermostats and create one for each connected to your 
 * `refresh` - Data polling interval in seconds, defaults to 60 seconds
 * `storage` - Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs
 * `usePermanentHolds` - If set to `true`, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to `false`, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off.
+* `debug` - Enables debug level logging from the plugin, defaults to `false`, to enable set to `true`
 
 # Credits
 
