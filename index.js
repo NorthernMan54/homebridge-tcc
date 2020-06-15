@@ -118,6 +118,10 @@ function pollDevices() {
     } else {
       this.log("ERROR: pollDevices", err);
     }
+    myAccessories.forEach(function(accessory) {
+      accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
+        .updateValue(new Error("Status missing for thermostat"));
+    });
   });
 }
 
