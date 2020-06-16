@@ -96,6 +96,8 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
     });
   }
 
+  accessory.context.ChangeThermostat = new ChangeThermostat(accessory);
+  debug("CA", accessory.context.ChangeThermostat);
   myAccessories.push(accessory);
 };
 
@@ -259,7 +261,7 @@ function setTargetTemperature(value, callback) {
   this.log("Setting target temperature for", this.displayName, "to", value + "°");
   this.context.logEventCounter = 9;
   // debug("this", this);
-  thermostats.ChangeThermostat(this, {
+  this.context.ChangeThermostat.put({
     TargetTemperature: value
   }).then((thermostat) => {
     // debug("setTargetTemperature", this, thermostat);
@@ -273,7 +275,7 @@ function setTargetTemperature(value, callback) {
 function setTargetHeatingCooling(value, callback) {
   this.log("Setting switch for", this.displayName, "to", value);
   this.context.logEventCounter = 9;
-  thermostats.ChangeThermostat(this, {
+  this.context.ChangeThermostat.put({
     TargetHeatingCooling: value
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
@@ -286,7 +288,7 @@ function setTargetHeatingCooling(value, callback) {
 
 function setHeatingThresholdTemperature(value, callback) {
   this.log("Setting HeatingThresholdTemperature for", this.displayName, "to", value);
-  thermostats.ChangeThermostat(this, {
+  this.context.ChangeThermostat.put({
     HeatingThresholdTemperature: value
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
@@ -299,7 +301,7 @@ function setHeatingThresholdTemperature(value, callback) {
 
 function setCoolingThresholdTemperature(value, callback) {
   this.log("Setting CoolingThresholdTemperature for", this.displayName, "to", value);
-  thermostats.ChangeThermostat(this, {
+  this.context.ChangeThermostat.put({
     CoolingThresholdTemperature: value
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
@@ -320,3 +322,69 @@ function getAccessoryByThermostatID(ThermostatID) {
   });
   return value;
 }
+
+function ChangeThermostat(accessory) {
+  // debug("ChangeThermostat", accessory);
+  this.desiredState = {};
+  this.deferrals = [];
+  this.ThermostatID = accessory.context.ThermostatID;
+  this.waitTimeUpdate = 100;
+}
+
+ChangeThermostat.prototype.put = function(state) {
+  debug("put", state);
+  return new Promise((resolve, reject) => {
+    for (const key in state) {
+      // console.log("ChangeThermostat", accessory);
+      this.desiredState.ThermostatID = this.ThermostatID;
+      this.desiredState[key] = state[key];
+    }
+    const d = {
+      resolve: resolve,
+      reject: reject
+    };
+    this.deferrals.push(d);
+    if (this.waitTimeUpdate > 0) {
+      setTimeout(() => {
+        thermostats.ChangeThermostat(this.desiredState, this.deferrals);
+        this.desiredState = {};
+        this.deferrals = [];
+      }, this.waitTimeUpdate);
+    } else {
+      thermostats.ChangeThermostat(this.desiredState, this.deferrals);
+      this.desiredState = {};
+      this.deferrals = [];
+    }
+  });
+};
+
+/*
+tcc.prototype._put = function() {
+  const desiredState = this.desiredState;
+  const deferrals = this.deferrals;
+  this.desiredState = {};
+  this.deferrals = [];
+  this.updating = false;
+  debug("_put()", desiredState);
+  (async () => {
+    try {
+      var CommTaskID = await this._UpdateThermostat(desiredState);
+      await this._GetCommTaskState(CommTaskID);
+      var thermostat = await this._GetThermostat(desiredState.ThermostatID);
+      this.recentlyUpdated = true;
+      for (const d of deferrals) {
+        d.resolve(thermostat);
+      }
+      setTimeout(() => {
+        this.recentlyUpdated = false;
+      }, 500);
+    } catch (err) {
+      console.error("_put Error:", err);
+      this.sessionID = null;
+      for (const d of deferrals) {
+        d.reject(err);
+      }
+    }
+  })();
+};
+*/
