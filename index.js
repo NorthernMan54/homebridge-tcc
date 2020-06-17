@@ -97,7 +97,7 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
   }
 
   accessory.context.ChangeThermostat = new ChangeThermostat(accessory);
-  debug("CA", accessory.context.ChangeThermostat);
+  // debug("CA", accessory.context.ChangeThermostat);
   myAccessories.push(accessory);
 };
 
@@ -334,7 +334,7 @@ function ChangeThermostat(accessory) {
 }
 
 ChangeThermostat.prototype.put = function(state) {
-  debug("put", state);
+  debug("put %s ->", this.ThermostatID, state);
   return new Promise((resolve, reject) => {
     this.desiredState.ThermostatID = this.ThermostatID;
     for (const key in state) {
