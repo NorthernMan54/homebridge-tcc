@@ -328,15 +328,15 @@ function ChangeThermostat(accessory) {
   this.desiredState = {};
   this.deferrals = [];
   this.ThermostatID = accessory.context.ThermostatID;
-  this.waitTimeUpdate = 100;
+  this.waitTimeUpdate = 100; // wait 100ms before processing change
 }
 
 ChangeThermostat.prototype.put = function(state) {
   debug("put", state);
   return new Promise((resolve, reject) => {
+    this.desiredState.ThermostatID = this.ThermostatID;
     for (const key in state) {
       // console.log("ChangeThermostat", accessory);
-      this.desiredState.ThermostatID = this.ThermostatID;
       this.desiredState[key] = state[key];
     }
     const d = {
@@ -344,16 +344,25 @@ ChangeThermostat.prototype.put = function(state) {
       reject: reject
     };
     this.deferrals.push(d);
-    if (this.waitTimeUpdate > 0) {
-      setTimeout(() => {
-        thermostats.ChangeThermostat(this.desiredState, this.deferrals);
-        this.desiredState = {};
-        this.deferrals = [];
-      }, this.waitTimeUpdate);
-    } else {
-      thermostats.ChangeThermostat(this.desiredState, this.deferrals);
-      this.desiredState = {};
-      this.deferrals = [];
+    // debug("setTimeout", this.timeout);
+    if (!this.timeout) {
+      this.timeout = setTimeout(() => {
+        thermostats.ChangeThermostat(this.desiredState).then((thermostat) => {
+          for (const d of this.deferrals) {
+            d.resolve(thermostat);
+          }
+          this.desiredState = {};
+          this.deferrals = [];
+          this.timeout = null;
+        }).catch((error) => {
+          for (const d of this.deferrals) {
+            d.reject(error);
+          }
+          this.desiredState = {};
+          this.deferrals = [];
+          this.timeout = null;
+        });
+      });
     }
   });
 };
