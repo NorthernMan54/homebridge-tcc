@@ -323,6 +323,8 @@ function getAccessoryByThermostatID(ThermostatID) {
   return value;
 }
 
+// Consolidate change requests received over 100ms into a single request
+
 function ChangeThermostat(accessory) {
   // debug("ChangeThermostat", accessory);
   this.desiredState = {};
@@ -347,6 +349,7 @@ ChangeThermostat.prototype.put = function(state) {
     // debug("setTimeout", this.timeout);
     if (!this.timeout) {
       this.timeout = setTimeout(() => {
+        // debug("put start");
         thermostats.ChangeThermostat(this.desiredState).then((thermostat) => {
           for (const d of this.deferrals) {
             d.resolve(thermostat);
@@ -354,6 +357,7 @@ ChangeThermostat.prototype.put = function(state) {
           this.desiredState = {};
           this.deferrals = [];
           this.timeout = null;
+          // debug("put complete", thermostat);
         }).catch((error) => {
           for (const d of this.deferrals) {
             d.reject(error);
@@ -361,39 +365,9 @@ ChangeThermostat.prototype.put = function(state) {
           this.desiredState = {};
           this.deferrals = [];
           this.timeout = null;
+          // debug("put error", error);
         });
-      });
+      }, this.waitTimeUpdate);
     }
   });
 };
-
-/*
-tcc.prototype._put = function() {
-  const desiredState = this.desiredState;
-  const deferrals = this.deferrals;
-  this.desiredState = {};
-  this.deferrals = [];
-  this.updating = false;
-  debug("_put()", desiredState);
-  (async () => {
-    try {
-      var CommTaskID = await this._UpdateThermostat(desiredState);
-      await this._GetCommTaskState(CommTaskID);
-      var thermostat = await this._GetThermostat(desiredState.ThermostatID);
-      this.recentlyUpdated = true;
-      for (const d of deferrals) {
-        d.resolve(thermostat);
-      }
-      setTimeout(() => {
-        this.recentlyUpdated = false;
-      }, 500);
-    } catch (err) {
-      console.error("_put Error:", err);
-      this.sessionID = null;
-      for (const d of deferrals) {
-        d.reject(err);
-      }
-    }
-  })();
-};
-*/
