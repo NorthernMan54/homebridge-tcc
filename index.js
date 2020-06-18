@@ -248,6 +248,7 @@ function TccAccessory(that, device) {
     // this.accessory.getService(Service.Thermostat).addCharacteristic(CustomCharacteristic.ProgramCommand);
     // this.accessory.getService(Service.Thermostat).addCharacteristic(CustomCharacteristic.ProgramData);
 
+    this.accessory.context.ChangeThermostat = new ChangeThermostat(this.accessory);
     that.api.registerPlatformAccessories("homebridge-tcc", "tcc", [this.accessory]);
     myAccessories.push(this.accessory);
     return this.accessory;
