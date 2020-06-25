@@ -170,7 +170,7 @@ function TccAccessory(that, device) {
   this.storage = that.storage;
   this.refresh = that.refresh;
 
-  var uuid = UUIDGen.generate(this.name);
+  var uuid = UUIDGen.generate(this.name + " - TCC");
 
   if (!getAccessoryByThermostatID(this.ThermostatID)) {
     this.log("Adding TCC Device", this.name);
