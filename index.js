@@ -115,8 +115,12 @@ function pollDevices() {
       }
     }.bind(this));
   }).catch((err) => {
-    if (err.message) {
-      this.log("ERROR: pollDevices", err.message);
+    if (err.message === 'Error: GetLocations InvalidSessionID') {
+      // [Thermostat] ERROR: pollDevices Error: GetLocations InvalidSessionID
+      // this.log("ERROR: pollDevices", err.message);
+    } else if (err.message) {
+      // [Thermostat] ERROR: pollDevices Error: GetLocations InvalidSessionID
+      this.log("pollDevices", err.message);
     } else {
       this.log("ERROR: pollDevices", err);
     }
