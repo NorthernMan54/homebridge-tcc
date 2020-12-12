@@ -69,3 +69,4 @@ To resolve the issue, please follow the steps here. https://github.com/nodejs/no
 - l3nticular - Support for Mode 7
 - simont77 - FakeGato History
 - hakusaro - Added support for permanent temperature holds.
+- jcgorla-dev - Validation of Honeywell's Prestige IAQ Thermostat
