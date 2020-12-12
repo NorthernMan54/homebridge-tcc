@@ -15,6 +15,7 @@ Plugin will discover your thermostats and create one for each connected to your 
 * TH6320WF
 * 9850
 * MHK1
+* Honeywell's Prestige IAQ Thermostat (THX9421R5021WW) and it's accompanying Equipment Interface Module (THM5421R1021)
 
 # Installation
 
