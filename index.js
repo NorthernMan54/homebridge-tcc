@@ -137,6 +137,9 @@ function updateStatus(accessory, device) {
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Model)
     .updateValue(device.Model);
   var service = accessory.getService(Service.Thermostat);
+  var InsideTemperature = accessory.getService(device.Name + "-" + "InsideTemperature");
+  var InsideHumidity = accessory.getService(device.Name + "-" + "InsideHumidity");
+  var OutsideHumidity = accessory.getService(device.Name + "-" + "OutsideHumidity");
   service.getCharacteristic(Characteristic.Name)
     .updateValue(device.Name);
   service.getCharacteristic(Characteristic.TargetTemperature)
@@ -151,6 +154,12 @@ function updateStatus(accessory, device) {
     .updateValue(device.CoolingThresholdTemperature);
   service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
     .updateValue(device.HeatingThresholdTemperature);
+  InsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
+    .updateValue(device.CurrentTemperature);
+  InsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
+    .updateValue(device.InsideHumidity);
+  OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
+    .updateValue(device.OutsideHumidity);
   // Fakegato Support
   accessory.context.logEventCounter++;
   if (!(accessory.context.logEventCounter % 10)) {
@@ -190,6 +199,9 @@ function TccAccessory(that, device) {
       .setCharacteristic(Characteristic.FirmwareRevision, require('./package.json').version);
 
     this.accessory.addService(Service.Thermostat, this.name);
+    this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + "-" + "InsideTemperature");
+    this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + "-" + "InsideHumidity");
+    this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + "-" + "OutsideHumidity");
 
     // debug("HB", this.device, this.ThermostatID);
     //       .setProps({validValues: hbValues.TargetHeatingCoolingStateValidValues})
@@ -208,6 +220,19 @@ function TccAccessory(that, device) {
         minValue: -100, // If you need this, you have major problems!!!!!
         maxValue: 100
       });
+      
+    this.InsideTemperatureService
+      .getCharacteristic(Characteristic.CurrentTemperature)
+      .setProps({
+        minValue: -100, // If you need this, you have major problems!!!!!
+        maxValue: 100
+      });
+
+    this.InsideHumidityService
+      .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+      
+    this.OutsideHumidityService
+      .getCharacteristic(Characteristic.CurrentRelativeHumidity);
 
     this.accessory
       .getService(Service.Thermostat)
