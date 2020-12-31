@@ -132,6 +132,7 @@ function pollDevices() {
 }
 
 function updateStatus(accessory, device) {
+  debug("updateStatus() - we are in - ", accessory.displayName);
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Name)
     .updateValue(device.Name);
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Model)
@@ -140,6 +141,8 @@ function updateStatus(accessory, device) {
   var InsideTemperature = accessory.getService(device.Name + "-" + "InsideTemperature");
   var InsideHumidity = accessory.getService(device.Name + "-" + "InsideHumidity");
   var OutsideHumidity = accessory.getService(device.Name + "-" + "OutsideHumidity");
+  
+  debug("updateStatus() - got all the services - ", accessory.displayName);
   service.getCharacteristic(Characteristic.Name)
     .updateValue(device.Name);
   service.getCharacteristic(Characteristic.TargetTemperature)
@@ -160,6 +163,8 @@ function updateStatus(accessory, device) {
     .updateValue(device.InsideHumidity);
   OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
     .updateValue(device.OutsideHumidity);
+
+  debug("updateStatus() - set all the values - ", accessory.displayName);
   // Fakegato Support
   accessory.context.logEventCounter++;
   if (!(accessory.context.logEventCounter % 10)) {
