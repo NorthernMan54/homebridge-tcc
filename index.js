@@ -205,8 +205,8 @@ function TccAccessory(that, device) {
 
     this.accessory.addService(Service.Thermostat, this.name);
     this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + "-" + "InsideTemperature");
-    this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + "-" + "InsideHumidity");
-    this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + "-" + "OutsideHumidity");
+    this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + "-" + "InsideHumidity", "INSIDE");
+    this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + "-" + "OutsideHumidity", "OUTSIDE");
 
     // debug("HB", this.device, this.ThermostatID);
     //       .setProps({validValues: hbValues.TargetHeatingCoolingStateValidValues})
