@@ -106,8 +106,8 @@ function pollDevices() {
     myAccessories.forEach(function(accessory) {
       debug("pollDevices - updateStatus", accessory.displayName);
       if (devices.hb[accessory.context.ThermostatID]) {
-        this.log("pollDevices()", this.devices);
-        updateStatus(accessory, devices.hb[accessory.context.ThermostatID]).bind(this);
+        var devicesConfig = this.devices;
+        updateStatus(accessory, devices.hb[accessory.context.ThermostatID]);
       } else {
         this.log("ERROR: no data for", accessory.displayName);
         // debug("accessory", accessory);
@@ -132,7 +132,7 @@ function pollDevices() {
   });
 }
 
-function updateStatus(accessory, device) {
+function updateStatus(accessory, device, config) {
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Name)
     .updateValue(device.Name);
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Model)
@@ -141,8 +141,8 @@ function updateStatus(accessory, device) {
   var service = accessory.getService(Service.Thermostat);
 
   // push config settings for this thermostat along with next function
-  debug("updateStatus()", this.devices);
-  for (var deviceConfig in this.devices) {
+  debug("updateStatus()", devicesConfig);
+  for (var deviceConfig in devicesConfig) {
     if (deviceConfig.deviceID == accessory.context.ThermostatID) {
       this.deviceConfig = deviceConfig;
     }
