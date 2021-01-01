@@ -52,6 +52,8 @@ tccPlatform.prototype.didFinishLaunching = function() {
   thermostats.pollThermostat().then((devices) => {
     for (var zone in devices.hb) {
       debug("Creating accessory for", devices.hb[zone].Name);
+      debug(devices.hb[zone]);
+      debug(devices);
       var newAccessory = new TccAccessory(this, devices.hb[zone]);
       updateStatus(newAccessory, devices.hb[zone]);
     }
