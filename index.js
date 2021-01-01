@@ -156,21 +156,25 @@ function updateStatus(accessory, device, config) {
   debug("updateStatus() - insideHumidity:",thisDeviceConfig.insideHumidity);
   debug("updateStatus() - outsideHumidity:",thisDeviceConfig.outsideHumidity);
   if (thisDeviceConfig.insideTemperature || false) {
+    debug("updateStatus() - device.Name - InsideTemperature = true");
     var InsideTemperature = accessory.getService(device.Name + "Temperature");
     InsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.CurrentTemperature);
   }
   if (thisDeviceConfig.outsideTemperature || false) {
+    debug("updateStatus() - device.Name - OutsideTemperature = true");
     var OutsideTemperature = accessory.getService("Outside Temperature");
     OutsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.OutsideTemperature);
   }
   if (thisDeviceConfig.insideHumidity || false) {
+    debug("updateStatus() - device.Name - InsideHumidity = true");
     var InsideHumidity = accessory.getService(device.Name + "Humidity");
     InsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .updateValue(device.InsideHumidity);
   }
   if (thisDeviceConfig.outsideHumidity || false) {
+    debug("updateStatus() - device.Name - OutsideHumidity = true");
     var OutsideHumidity = accessory.getService("Outside Humidity");
 
     OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
@@ -246,6 +250,7 @@ function TccAccessory(that, device, config) {
     debug("TccAccessory() - insideHumidity:",thisDeviceConfig.insideHumidity);
     debug("TccAccessory() - outsideHumidity:",thisDeviceConfig.outsideHumidity);
     if (thisDeviceConfig.insideTemperature || false) {
+      debug("TccAccessory() - device.Name - InsideTemperature = true");
       this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + "Temperature", "INSIDE");
       
       this.InsideTemperatureService
@@ -256,6 +261,7 @@ function TccAccessory(that, device, config) {
         });
     }
     if (thisDeviceConfig.outsideTemperature || false) {
+      debug("TccAccessory() - device.Name - outsideTemperature = true");
       this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "OUTSIDE");
       
       this.OutsideTemperatureService
@@ -266,12 +272,14 @@ function TccAccessory(that, device, config) {
         });
     }
     if (thisDeviceConfig.insideHumidity || false) {
+      debug("TccAccessory() - device.Name - InsideHumidity = true");
       this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + "Humidity", "INSIDE");
       
       this.InsideHumidityService
         .getCharacteristic(Characteristic.CurrentRelativeHumidity);
     }
     if (thisDeviceConfig.outsideHumidity || false) {
+      debug("TccAccessory() - device.Name - OutsideHumidity = true");
       this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "OUTSIDE");
       
       this.OutsideHumidityService
