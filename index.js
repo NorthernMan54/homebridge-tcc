@@ -400,7 +400,7 @@ function setTargetTemperature(value, callback) {
     TargetTemperature: value
   }).then((thermostat) => {
     // debug("setTargetTemperature", this, thermostat);
-    updateStatus(this, thermostat);
+    updateStatus(this, thermostat, null);
     callback(null, value);
   }).catch((error) => {
     callback(error);
@@ -414,7 +414,7 @@ function setTargetHeatingCooling(value, callback) {
     TargetHeatingCooling: value
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
-    updateStatus(this, thermostat);
+    updateStatus(this, thermostat, null);
     callback(null, value);
   }).catch((error) => {
     callback(error);
@@ -427,7 +427,7 @@ function setHeatingThresholdTemperature(value, callback) {
     HeatingThresholdTemperature: value
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
-    updateStatus(this, thermostat);
+    updateStatus(this, thermostat, null);
     callback(null, value);
   }).catch((error) => {
     callback(error);
@@ -440,7 +440,7 @@ function setCoolingThresholdTemperature(value, callback) {
     CoolingThresholdTemperature: value
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
-    updateStatus(this, thermostat);
+    updateStatus(this, thermostat, null);
     callback(null, value);
   }).catch((error) => {
     callback(error);
