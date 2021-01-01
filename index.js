@@ -156,25 +156,25 @@ function updateStatus(accessory, device, config) {
   debug("updateStatus() - insideHumidity:",thisDeviceConfig.insideHumidity);
   debug("updateStatus() - outsideHumidity:",thisDeviceConfig.outsideHumidity);
   if (thisDeviceConfig.insideTemperature || false) {
-    debug("updateStatus() - device.Name - InsideTemperature = true");
+    debug("updateStatus()" + device.Name + "InsideTemperature = true");
     var InsideTemperature = accessory.getService(device.Name + "Temperature");
     InsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.CurrentTemperature);
   }
   if (thisDeviceConfig.outsideTemperature || false) {
-    debug("updateStatus() - device.Name - OutsideTemperature = true");
+    debug("updateStatus()" + device.Name + "outsideTemperature = true");
     var OutsideTemperature = accessory.getService("Outside Temperature");
     OutsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.OutsideTemperature);
   }
   if (thisDeviceConfig.insideHumidity || false) {
-    debug("updateStatus() - device.Name - InsideHumidity = true");
+    debug("updateStatus()" + device.Name + "insideHumidity = true");
     var InsideHumidity = accessory.getService(device.Name + "Humidity");
     InsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .updateValue(device.InsideHumidity);
   }
   if (thisDeviceConfig.outsideHumidity || false) {
-    debug("updateStatus() - device.Name - OutsideHumidity = true");
+    debug("updateStatus()" + device.Name + "outsideHumidity = true");
     var OutsideHumidity = accessory.getService("Outside Humidity");
 
     OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
@@ -250,7 +250,7 @@ function TccAccessory(that, device, config) {
     debug("TccAccessory() - insideHumidity:",thisDeviceConfig.insideHumidity);
     debug("TccAccessory() - outsideHumidity:",thisDeviceConfig.outsideHumidity);
     if (thisDeviceConfig.insideTemperature || false) {
-      debug("TccAccessory() - device.Name - InsideTemperature = true");
+      debug("TccAccessory()" + device.Name + "InsideTemperature = true");
       this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + "Temperature", "INSIDE");
       
       this.InsideTemperatureService
@@ -261,7 +261,7 @@ function TccAccessory(that, device, config) {
         });
     }
     if (thisDeviceConfig.outsideTemperature || false) {
-      debug("TccAccessory() - device.Name - outsideTemperature = true");
+      debug("TccAccessory()" + device.Name + "outsideTemperature = true");
       this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "OUTSIDE");
       
       this.OutsideTemperatureService
@@ -272,14 +272,14 @@ function TccAccessory(that, device, config) {
         });
     }
     if (thisDeviceConfig.insideHumidity || false) {
-      debug("TccAccessory() - device.Name - InsideHumidity = true");
+      debug("TccAccessory()" + device.Name + "insideHumidity = true");
       this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + "Humidity", "INSIDE");
       
       this.InsideHumidityService
         .getCharacteristic(Characteristic.CurrentRelativeHumidity);
     }
     if (thisDeviceConfig.outsideHumidity || false) {
-      debug("TccAccessory() - device.Name - OutsideHumidity = true");
+      debug("TccAccessory()" + device.Name + "outsideHumidity = true");
       this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "OUTSIDE");
       
       this.OutsideHumidityService
@@ -353,7 +353,46 @@ function TccAccessory(that, device, config) {
     return this.accessory;
   } else {
     this.log("Existing TCC accessory", this.name);
-    return getAccessoryByThermostatID(this.ThermostatID);
+    
+    // need to check if accessory already exists, but user added temp/humidity sensors then must declare
+    this.accessory = getAccessoryByThermostatID(this.ThermostatID);
+    if (thisDeviceConfig.insideTemperature && !this.accessory.getService(this.Name + "Temperature")) {
+      debug("TccAccessory()" + this.Name + "OutsideTemperature = true, adding sensor");
+      this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + "Temperature", "INSIDE");
+      
+      this.InsideTemperatureService
+        .getCharacteristic(Characteristic.CurrentTemperature)
+        .setProps({
+          minValue: -100, // If you need this, you have major problems!!!!!
+          maxValue: 100
+        });
+    }
+    if (thisDeviceConfig.outsideTemperature && !this.accessory.getService("Outside Temperature")) {
+      debug("TccAccessory()" + this.Name + "OutsideTemperature = true, adding sensor");
+      this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "OUTSIDE");
+      
+      this.OutsideTemperatureService
+        .getCharacteristic(Characteristic.CurrentTemperature)
+        .setProps({
+          minValue: -100, // If you need this, you have major problems!!!!!
+          maxValue: 100
+        });
+    }
+    if (thisDeviceConfig.insideHumidity && !this.accessory.getService(this.Name + "Humidity")) {
+      debug("TccAccessory()" + this.Name + "InsideHumidity = true, adding sensor");
+      this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + "Humidity", "INSIDE");
+      
+      this.InsideHumidityService
+        .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+    }
+    if (thisDeviceConfig.outsideHumidity && !this.accessory.getService("Outside Humidity")) {
+      debug("TccAccessory()" + this.Name + "outsideHumidity = true, adding sensor");
+      this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "OUTSIDE");
+      
+      this.OutsideHumidityService
+        .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+    }
+    return this.accessory;
   }
 }
 
