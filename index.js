@@ -52,6 +52,8 @@ tccPlatform.prototype.didFinishLaunching = function() {
   thermostats.pollThermostat().then((devices) => {
     for (var zone in devices.hb) {
       debug("Creating accessory for", devices.hb[zone].Name);
+      debug("Creating accessory for", devices.hb[zone].ThermostatID);
+      debug("tccPlatform.prototype.didFinishLaunching()",this.devices)
       var newAccessory = new TccAccessory(this, devices.hb[zone]);
       updateStatus(newAccessory, devices.hb[zone]);
     }
@@ -208,13 +210,14 @@ function TccAccessory(that, device) {
   this.storage = that.storage;
   this.refresh = that.refresh;
   this.devices = that.devices;
+  this.log("TccAccessory()" + that.usePermanentHolds);
   this.log("TccAccessory()" + that.devices);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
 
   // need to get config for this thermostat id
   this.devices.forEach(function(deviceConfig) {
-    if (deviceConfig.deviceID == this.ThermostatID) {
+    if (deviceConfig.deviceID == device.ThermostatID) {
       this.deviceConfig = deviceConfig;
     }
   });
