@@ -103,7 +103,7 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
 
 function pollDevices() {
   thermostats.pollThermostat().then((devices) => {
-    this.log("pollDevices():" + this.config);
+    this.log("pollDevices():", this.config);
     myAccessories.forEach(function(accessory) {
       debug("pollDevices - updateStatus", accessory.displayName);
       if (devices.hb[accessory.context.ThermostatID]) {
