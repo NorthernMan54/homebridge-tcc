@@ -141,7 +141,7 @@ function updateStatus(accessory, device) {
   var service = accessory.getService(Service.Thermostat);
 
   // push config settings for this thermostat along with next function
-  this.log("updateStatus()", this.devices);
+  debug("updateStatus()", this.devices);
   for (var deviceConfig in this.devices) {
     if (deviceConfig.deviceID == accessory.context.ThermostatID) {
       this.deviceConfig = deviceConfig;
