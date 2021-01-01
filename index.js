@@ -54,7 +54,7 @@ tccPlatform.prototype.didFinishLaunching = function() {
       debug("Creating accessory for", devices.hb[zone].Name);
       debug("Creating accessory for", devices.hb[zone].ThermostatID);
       debug("tccPlatform.prototype.didFinishLaunching()",this.devices)
-      var newAccessory = new TccAccessory(this, devices.hb[zone]);
+      var newAccessory = new TccAccessory(this, devices.hb[zone], this.devices);
       updateStatus(newAccessory, devices.hb[zone], this.devices);
     }
   }).catch((err) => {
@@ -201,7 +201,7 @@ function updateStatus(accessory, device, config) {
   }
 }
 
-function TccAccessory(that, device) {
+function TccAccessory(that, device, config) {
   this.log = that.log;
   // this.log("Adding TCC Device", device.DeviceName);
   this.name = device.Name;
@@ -210,15 +210,13 @@ function TccAccessory(that, device) {
   this.usePermanentHolds = that.usePermanentHolds;
   this.storage = that.storage;
   this.refresh = that.refresh;
-  this.devices = that.devices;
-  debug("TccAccessory()" + that.usePermanentHolds);
-  debug("TccAccessory()" + that.devices);
+  debug("TccAccessory()" + config);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
 
   // need to get config for this thermostat id
   for (let i = 0; i < config.length; i++) {
-    if (deviceConfig[i].deviceID == accessory.context.ThermostatID) {
+    if (deviceConfig[i].deviceID == this.ThermostatID) {
       var thisDeviceConfig = deviceConfig[i];
     }
   }
@@ -239,7 +237,7 @@ function TccAccessory(that, device) {
     this.accessory.addService(Service.Thermostat, this.name);
     
     // check if user wants separate temperature and humidity sensors by zone/thermostat
-    if (this.deviceConfig.insideTemperature || false) {
+    if (thisDeviceConfig.insideTemperature || false) {
       this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + "Temperature", "INSIDE");
       
       this.InsideTemperatureService
@@ -249,7 +247,7 @@ function TccAccessory(that, device) {
           maxValue: 100
         });
     }
-    if (this.deviceConfig.outsideTemperature || false) {
+    if (thisDeviceConfig.outsideTemperature || false) {
       this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "OUTSIDE");
       
       this.OutsideTemperatureService
@@ -259,13 +257,13 @@ function TccAccessory(that, device) {
           maxValue: 100
         });
     }
-    if (this.deviceConfig.insideHumidity || false) {
+    if (thisDeviceConfig.insideHumidity || false) {
       this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + "Humidity", "INSIDE");
       
       this.InsideHumidityService
         .getCharacteristic(Characteristic.CurrentRelativeHumidity);
     }
-    if (this.deviceConfig.outsideHumidity || false) {
+    if (thisDeviceConfig.outsideHumidity || false) {
       this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "OUTSIDE");
       
       this.OutsideHumidityService
