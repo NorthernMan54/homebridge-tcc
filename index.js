@@ -106,13 +106,8 @@ function pollDevices() {
     myAccessories.forEach(function(accessory) {
       debug("pollDevices - updateStatus", accessory.displayName);
       if (devices.hb[accessory.context.ThermostatID]) {
-        // push config settings for this thermostat along with next function
-        for (var deviceConfig in this.devices) {
-          if (deviceConfig.deviceID == accessory.context.ThermostatID) {
-            this.deviceConfig = deviceConfig;
-          }
-        }
-        updateStatus(accessory, devices.hb[accessory.context.ThermostatID], this.deviceConfig);
+        this.log("pollDevices()", this.devices);
+        updateStatus(accessory, devices.hb[accessory.context.ThermostatID]).bind(this);
       } else {
         this.log("ERROR: no data for", accessory.displayName);
         // debug("accessory", accessory);
@@ -137,7 +132,7 @@ function pollDevices() {
   });
 }
 
-function updateStatus(accessory, device, config) {
+function updateStatus(accessory, device) {
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Name)
     .updateValue(device.Name);
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Model)
@@ -145,23 +140,31 @@ function updateStatus(accessory, device, config) {
     
   var service = accessory.getService(Service.Thermostat);
 
+  // push config settings for this thermostat along with next function
+  this.log("updateStatus()", this.devices);
+  for (var deviceConfig in this.devices) {
+    if (deviceConfig.deviceID == accessory.context.ThermostatID) {
+      this.deviceConfig = deviceConfig;
+    }
+  }
+
   // check if user wants separate temperature and humidity sensors
-  if (config.insideTemperature || false) {
+  if (this.deviceConfig.insideTemperature || false) {
     var InsideTemperature = accessory.getService(device.Name + "Temperature");
     InsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.CurrentTemperature);
   }
-  if (config.outsideTemperature || false) {
+  if (this.deviceConfig.outsideTemperature || false) {
     var OutsideTemperature = accessory.getService("Outside Temperature");
     OutsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.OutsideTemperature);
   }
-  if (config.insideHumidity || false) {
+  if (this.deviceConfig.insideHumidity || false) {
     var InsideHumidity = accessory.getService(device.Name + "Humidity");
     InsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .updateValue(device.InsideHumidity);
   }
-  if (config.outsideHumidity || false) {
+  if (this.deviceConfig.outsideHumidity || false) {
     var OutsideHumidity = accessory.getService("Outside Humidity");
 
     OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
