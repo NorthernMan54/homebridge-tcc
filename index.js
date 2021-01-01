@@ -52,8 +52,6 @@ tccPlatform.prototype.didFinishLaunching = function() {
   thermostats.pollThermostat().then((devices) => {
     for (var zone in devices.hb) {
       debug("Creating accessory for", devices.hb[zone].Name);
-      debug(devices.hb[zone]);
-      debug(devices);
       var newAccessory = new TccAccessory(this, devices.hb[zone]);
       updateStatus(newAccessory, devices.hb[zone]);
     }
@@ -140,7 +138,7 @@ function updateStatus(accessory, device) {
     .updateValue(device.Model);
     
   var service = accessory.getService(Service.Thermostat);
-  
+  debug(this.devices);
   // check if user wants separate temperature and humidity sensors
   if (device.insideTemperature || false) {
     var InsideTemperature = accessory.getService(device.Name + "Temperature");
