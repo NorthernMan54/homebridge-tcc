@@ -55,7 +55,7 @@ tccPlatform.prototype.didFinishLaunching = function() {
       debug("Creating accessory for", devices.hb[zone].ThermostatID);
       //debug("tccPlatform.prototype.didFinishLaunching()",this.devices)
       var newAccessory = new TccAccessory(this, devices.hb[zone], this.devices);
-      updateStatus(newAccessory, devices.hb[zone], this.devices);
+      updateStatus(newAccessory, devices.hb[zone]);
     }
   }).catch((err) => {
     this.log("Critical Error - No devices created, please restart.");
@@ -108,7 +108,7 @@ function pollDevices() {
     myAccessories.forEach(function(accessory) {
       debug("pollDevices - updateStatus", accessory.displayName);
       if (devices.hb[accessory.context.ThermostatID]) {
-        updateStatus(accessory, devices.hb[accessory.context.ThermostatID], this.devices);
+        updateStatus(accessory, devices.hb[accessory.context.ThermostatID]);
       } else {
         this.log("ERROR: no data for", accessory.displayName);
         // debug("accessory", accessory);
@@ -133,7 +133,7 @@ function pollDevices() {
   });
 }
 
-function updateStatus(accessory, device, config) {
+function updateStatus(accessory, device) {
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Name)
     .updateValue(device.Name);
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Model)
@@ -141,35 +141,26 @@ function updateStatus(accessory, device, config) {
     
   var service = accessory.getService(Service.Thermostat);
 
-  // push config settings for this thermostat along with next function
-  //debug("updateStatus()", config);
-  //debug("updateStatus()", config.length);
-  for (let i = 0; i < config.length; i++) {
-    if (config[i].deviceID == accessory.context.ThermostatID) {
-      var thisDeviceConfig = config[i];
-    }
-  }
-
   // check if user wants separate temperature and humidity sensors
-  if ((thisDeviceConfig.insideTemperature || false) && accessory.getService(device.Name + " Temperature")) {
+  if (accessory.getService(device.Name + " Temperature")) {
     debug("updateStatus() " + device.Name + " InsideTemperature = true");
     var InsideTemperature = accessory.getService(device.Name + " Temperature");
     InsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.CurrentTemperature);
   }
-  if ((thisDeviceConfig.outsideTemperature || false) && accessory.getService("Outside Temperature")) {
+  if (accessory.getService("Outside Temperature")) {
     debug("updateStatus() " + device.Name + " outsideTemperature = true");
     var OutsideTemperature = accessory.getService("Outside Temperature");
     OutsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.OutsideTemperature);
   }
-  if ((thisDeviceConfig.insideHumidity || false) && accessory.getService(device.Name + " Humidity")) {
+  if (accessory.getService(device.Name + " Humidity")) {
     debug("updateStatus() " + device.Name + " insideHumidity = true");
     var InsideHumidity = accessory.getService(device.Name + " Humidity");
     InsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .updateValue(device.InsideHumidity);
   }
-  if ((thisDeviceConfig.outsideHumidity || false) && accessory.getService("Outside Humidity")) {
+  if (accessory.getService("Outside Humidity")) {
     debug("updateStatus() " + device.Name + " outsideHumidity = true");
     var OutsideHumidity = accessory.getService("Outside Humidity");
 
@@ -400,7 +391,7 @@ function setTargetTemperature(value, callback) {
     TargetTemperature: value
   }).then((thermostat) => {
     // debug("setTargetTemperature", this, thermostat);
-    updateStatus(this, thermostat, null);
+    updateStatus(this, thermostat);
     callback(null, value);
   }).catch((error) => {
     callback(error);
@@ -414,7 +405,7 @@ function setTargetHeatingCooling(value, callback) {
     TargetHeatingCooling: value
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
-    updateStatus(this, thermostat, null);
+    updateStatus(this, thermostat);
     callback(null, value);
   }).catch((error) => {
     callback(error);
@@ -427,7 +418,7 @@ function setHeatingThresholdTemperature(value, callback) {
     HeatingThresholdTemperature: value
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
-    updateStatus(this, thermostat, null);
+    updateStatus(this, thermostat);
     callback(null, value);
   }).catch((error) => {
     callback(error);
@@ -440,7 +431,7 @@ function setCoolingThresholdTemperature(value, callback) {
     CoolingThresholdTemperature: value
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
-    updateStatus(this, thermostat, null);
+    updateStatus(this, thermostat);
     callback(null, value);
   }).catch((error) => {
     callback(error);
