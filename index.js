@@ -209,7 +209,7 @@ function TccAccessory(that, device) {
   this.storage = that.storage;
   this.refresh = that.refresh;
   this.devices = that.config['devices'];
-  console.log("config" + that.config);
+  this.log("config" + that.config);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
 
