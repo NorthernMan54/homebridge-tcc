@@ -141,11 +141,11 @@ function updateStatus(accessory, device, config) {
 
   // push config settings for this thermostat along with next function
   debug("updateStatus()", config);
-  for (var deviceConfig in config) {
+  this.devices.forEach(function(deviceConfig) {
     if (deviceConfig.deviceID == accessory.context.ThermostatID) {
       this.deviceConfig = deviceConfig;
     }
-  }
+  });
 
   // check if user wants separate temperature and humidity sensors
   if (this.deviceConfig.insideTemperature || false) {
@@ -213,11 +213,11 @@ function TccAccessory(that, device) {
   var uuid = UUIDGen.generate(this.name + " - TCC");
 
   // need to get config for this thermostat id
-  for (var deviceConfig in this.devices) {
+  this.devices.forEach(function(deviceConfig) {
     if (deviceConfig.deviceID == this.ThermostatID) {
       this.deviceConfig = deviceConfig;
     }
-  }
+  });
 
   if (!getAccessoryByThermostatID(this.ThermostatID)) {
     this.log("Adding TCC Device", this.name);
