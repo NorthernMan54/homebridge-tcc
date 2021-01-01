@@ -53,7 +53,7 @@ tccPlatform.prototype.didFinishLaunching = function() {
     for (var zone in devices.hb) {
       debug("Creating accessory for", devices.hb[zone].Name);
       debug("Creating accessory for", devices.hb[zone].ThermostatID);
-      debug("tccPlatform.prototype.didFinishLaunching()",this.devices)
+      //debug("tccPlatform.prototype.didFinishLaunching()",this.devices)
       var newAccessory = new TccAccessory(this, devices.hb[zone], this.devices);
       updateStatus(newAccessory, devices.hb[zone], this.devices);
     }
@@ -142,8 +142,8 @@ function updateStatus(accessory, device, config) {
   var service = accessory.getService(Service.Thermostat);
 
   // push config settings for this thermostat along with next function
-  debug("updateStatus()", config);
-  debug("updateStatus()", config.length);
+  //debug("updateStatus()", config);
+  //debug("updateStatus()", config.length);
   for (let i = 0; i < config.length; i++) {
     if (config[i].deviceID == accessory.context.ThermostatID) {
       var thisDeviceConfig = config[i];
@@ -151,6 +151,10 @@ function updateStatus(accessory, device, config) {
   }
 
   // check if user wants separate temperature and humidity sensors
+  debug("updateStatus() - insideTemperature:",thisDeviceConfig.insideTemperature);
+  debug("updateStatus() - outsideTemperature:",thisDeviceConfig.outsideTemperature);
+  debug("updateStatus() - insideHumidity:",thisDeviceConfig.insideHumidity);
+  debug("updateStatus() - outsideHumidity:",thisDeviceConfig.outsideHumidity);
   if (thisDeviceConfig.insideTemperature || false) {
     var InsideTemperature = accessory.getService(device.Name + "Temperature");
     InsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
@@ -210,7 +214,7 @@ function TccAccessory(that, device, config) {
   this.usePermanentHolds = that.usePermanentHolds;
   this.storage = that.storage;
   this.refresh = that.refresh;
-  debug("TccAccessory()",config);
+  //debug("TccAccessory()",config);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
 
@@ -237,6 +241,10 @@ function TccAccessory(that, device, config) {
     this.accessory.addService(Service.Thermostat, this.name);
     
     // check if user wants separate temperature and humidity sensors by zone/thermostat
+    debug("TccAccessory() - insideTemperature:",thisDeviceConfig.insideTemperature);
+    debug("TccAccessory() - outsideTemperature:",thisDeviceConfig.outsideTemperature);
+    debug("TccAccessory() - insideHumidity:",thisDeviceConfig.insideHumidity);
+    debug("TccAccessory() - outsideHumidity:",thisDeviceConfig.outsideHumidity);
     if (thisDeviceConfig.insideTemperature || false) {
       this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + "Temperature", "INSIDE");
       
