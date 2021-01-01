@@ -217,7 +217,7 @@ function TccAccessory(that, device, config) {
   }
 
   if (!getAccessoryByThermostatID(this.ThermostatID)) {
-    this.log("Adding TCC Device", this.name);
+    this.log("Adding TCC Device (deviceID="+this.ThermostatID+")", this.name);
     this.accessory = new Accessory(this.name, uuid, 10);
     this.accessory.log = that.log;
     this.accessory.context.ThermostatID = device.ThermostatID;
@@ -335,7 +335,7 @@ function TccAccessory(that, device, config) {
     myAccessories.push(this.accessory);
     return this.accessory;
   } else {
-    this.log("Existing TCC accessory", this.name);
+    this.log("Existing TCC accessory (deviceID="+this.ThermostatID+")", this.name);
     
     // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
     this.accessory = getAccessoryByThermostatID(this.ThermostatID);

@@ -57,10 +57,29 @@ To resolve the issue, please follow the steps here. https://github.com/nodejs/no
 * `storage` - Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs
 * `usePermanentHolds` - If set to `true`, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to `false`, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off.
 * `debug` - Enables debug level logging from the plugin, defaults to `false`, to enable set to `true`
+* `devices` and `deviceID` - required to setup temperature/humidity sensors, id is obtained by looking at your homebridge logs for TCC entries when you restart
 * `insideTemperature` - Enables separate temperature sensor in HomeKit (useful for automations), to enable set to `true` on each thermostat
 * `outsideTemperature` - Enables separate temperature sensor in HomeKit (useful for automations), to enable set to `true` on each thermostat
 * `insideHumidity` - Enables separate humidity sensor in HomeKit (useful for automations), to enable set to `true` on each thermostat
 * `outsideHumidity` - Enables separate humidity sensor in HomeKit (useful for automations), to enable set to `true` on each thermostat
+
+```
+"platforms": [
+       {
+            "platform": "tcc",
+            "name" : "Thermostat",
+            "username" : ".....",
+            "password" : ".....",
+            "devices": [{
+                "deviceID": "3910306",
+                "insideTemperature": true,
+                "insideHumidity": true,
+                "outsideTemperature": true,
+                "outsideHumidity": true
+            }]
+        }
+    ]
+```
 
 # Credits
 
