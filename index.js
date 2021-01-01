@@ -145,8 +145,8 @@ function updateStatus(accessory, device, config) {
   debug("updateStatus()", config);
   debug("updateStatus()", config.length);
   for (let i = 0; i < config.length; i++) {
-    if (deviceConfig[i].deviceID == accessory.context.ThermostatID) {
-      var thisDeviceConfig = deviceConfig[i];
+    if (config[i].deviceID == accessory.context.ThermostatID) {
+      var thisDeviceConfig = config[i];
     }
   }
 
@@ -216,8 +216,8 @@ function TccAccessory(that, device, config) {
 
   // need to get config for this thermostat id
   for (let i = 0; i < config.length; i++) {
-    if (deviceConfig[i].deviceID == this.ThermostatID) {
-      var thisDeviceConfig = deviceConfig[i];
+    if (config[i].deviceID == this.ThermostatID) {
+      var thisDeviceConfig = config[i];
     }
   }
 
