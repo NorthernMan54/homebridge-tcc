@@ -348,8 +348,8 @@ function TccAccessory(that, device, config) {
     
     // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
     this.accessory = getAccessoryByThermostatID(this.ThermostatID);
-    debug("TccAccessory() " + this.name + " getService('this.Name + Temperature')" + this.accessory.getService(this.Name + " Temperature"));
-    if ((thisDeviceConfig.insideTemperature || false)  && !this.accessory.getService(this.Name + " Temperature")) {
+    debug("TccAccessory() " + this.name + " getService('this.name + Temperature')" + !this.accessory.getService(this.name + " Temperature"));
+    if ((thisDeviceConfig.insideTemperature || false)  && !this.accessory.getService(this.name + " Temperature")) {
       debug("TccAccessory() " + this.name + " InsideTemperature = true, adding sensor");
       this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
       
@@ -360,7 +360,7 @@ function TccAccessory(that, device, config) {
           maxValue: 100
         });
     }
-    debug("TccAccessory() " + this.name + " getService('Outside Temperature')" + this.accessory.getService("Outside Temperature"));
+    debug("TccAccessory() " + this.name + " getService('Outside Temperature')" + !this.accessory.getService("Outside Temperature"));
     if ((thisDeviceConfig.outsideTemperature || false)  && !this.accessory.getService("Outside Temperature")) {
       debug("TccAccessory() " + this.name + " OutsideTemperature = true, adding sensor");
       this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "Outside");
@@ -372,15 +372,15 @@ function TccAccessory(that, device, config) {
           maxValue: 100
         });
     }
-    debug("TccAccessory() " + this.name + " getService('this.Name + Humidity')" + this.accessory.getService(this.Name + " Humidity"));
-    if ((thisDeviceConfig.insideHumidity || false)  && !this.accessory.getService(this.Name + " Humidity")) {
+    debug("TccAccessory() " + this.name + " getService('this.name + Humidity')" + !this.accessory.getService(this.name + " Humidity"));
+    if ((thisDeviceConfig.insideHumidity || false)  && !this.accessory.getService(this.name + " Humidity")) {
       debug("TccAccessory() " + this.name + " InsideHumidity = true, adding sensor");
       this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
       
       this.InsideHumidityService
         .getCharacteristic(Characteristic.CurrentRelativeHumidity);
     }
-    debug("TccAccessory() " + this.name + " getService('Outside Humidity')" + this.accessory.getService("Outside Humidity"));
+    debug("TccAccessory() " + this.name + " getService('Outside Humidity')" + !this.accessory.getService("Outside Humidity"));
     if ((thisDeviceConfig.outsideHumidity || false) && !this.accessory.getService("Outside Humidity")) {
       debug("TccAccessory() " + this.name + " outsideHumidity = true, adding sensor");
       this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
