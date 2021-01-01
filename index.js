@@ -103,7 +103,7 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
 
 function pollDevices() {
   thermostats.pollThermostat().then((devices) => {
-    this.log("pollDevices():", this.devices);
+    //this.log("pollDevices():", this.devices); // this works
     myAccessories.forEach(function(accessory) {
       debug("pollDevices - updateStatus", accessory.displayName);
       if (devices.hb[accessory.context.ThermostatID]) {
@@ -142,7 +142,7 @@ function updateStatus(accessory, device) {
 
   // need to get config for this thermostat id
   
-  debug(this.config['devices']);
+  this.log("updateStatus()",this.devices);
   for (var deviceConfig in this.config['devices']) {
     if (deviceConfig.deviceID == device.ThermostatID) {
       this.deviceConfig = deviceConfig;
@@ -209,8 +209,8 @@ function TccAccessory(that, device) {
   this.usePermanentHolds = that.usePermanentHolds;
   this.storage = that.storage;
   this.refresh = that.refresh;
-  this.devices = that.config['devices'];
-  this.log("config" + that.config);
+  this.devices = that.devices;
+  this.log("TccAccessory()" + this.devices);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
 
