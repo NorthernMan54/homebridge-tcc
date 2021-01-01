@@ -55,7 +55,7 @@ tccPlatform.prototype.didFinishLaunching = function() {
       debug("Creating accessory for", devices.hb[zone].ThermostatID);
       debug("tccPlatform.prototype.didFinishLaunching()",this.devices)
       var newAccessory = new TccAccessory(this, devices.hb[zone]);
-      updateStatus(newAccessory, devices.hb[zone]);
+      updateStatus(newAccessory, devices.hb[zone], this.devices);
     }
   }).catch((err) => {
     this.log("Critical Error - No devices created, please restart.");
@@ -143,11 +143,12 @@ function updateStatus(accessory, device, config) {
 
   // push config settings for this thermostat along with next function
   debug("updateStatus()", config);
-  config.forEach(function(deviceConfig) {
-    if (deviceConfig.deviceID == accessory.context.ThermostatID) {
-      var thisDeviceConfig = deviceConfig;
+  debug("updateStatus()", config.length);
+  for (let i = 0; i < config.length; i++) {
+    if (deviceConfig[i].deviceID == accessory.context.ThermostatID) {
+      var thisDeviceConfig = deviceConfig[i];
     }
-  });
+  }
 
   // check if user wants separate temperature and humidity sensors
   if (thisDeviceConfig.insideTemperature || false) {
@@ -210,17 +211,17 @@ function TccAccessory(that, device) {
   this.storage = that.storage;
   this.refresh = that.refresh;
   this.devices = that.devices;
-  this.log("TccAccessory()" + that.usePermanentHolds);
-  this.log("TccAccessory()" + that.devices);
+  debug("TccAccessory()" + that.usePermanentHolds);
+  debug("TccAccessory()" + that.devices);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
 
   // need to get config for this thermostat id
-  this.devices.forEach(function(deviceConfig) {
-    if (deviceConfig.deviceID == device.ThermostatID) {
-      this.deviceConfig = deviceConfig;
+  for (let i = 0; i < config.length; i++) {
+    if (deviceConfig[i].deviceID == accessory.context.ThermostatID) {
+      var thisDeviceConfig = deviceConfig[i];
     }
-  });
+  }
 
   if (!getAccessoryByThermostatID(this.ThermostatID)) {
     this.log("Adding TCC Device", this.name);
