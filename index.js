@@ -143,27 +143,27 @@ function updateStatus(accessory, device, config) {
   debug("updateStatus()", config);
   config.forEach(function(deviceConfig) {
     if (deviceConfig.deviceID == accessory.context.ThermostatID) {
-      this.deviceConfig = deviceConfig;
+      var thisDeviceConfig = deviceConfig;
     }
   });
 
   // check if user wants separate temperature and humidity sensors
-  if (this.deviceConfig.insideTemperature || false) {
+  if (thisDeviceConfig.insideTemperature || false) {
     var InsideTemperature = accessory.getService(device.Name + "Temperature");
     InsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.CurrentTemperature);
   }
-  if (this.deviceConfig.outsideTemperature || false) {
+  if (thisDeviceConfig.outsideTemperature || false) {
     var OutsideTemperature = accessory.getService("Outside Temperature");
     OutsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.OutsideTemperature);
   }
-  if (this.deviceConfig.insideHumidity || false) {
+  if (thisDeviceConfig.insideHumidity || false) {
     var InsideHumidity = accessory.getService(device.Name + "Humidity");
     InsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .updateValue(device.InsideHumidity);
   }
-  if (this.deviceConfig.outsideHumidity || false) {
+  if (thisDeviceConfig.outsideHumidity || false) {
     var OutsideHumidity = accessory.getService("Outside Humidity");
 
     OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
@@ -208,7 +208,7 @@ function TccAccessory(that, device) {
   this.storage = that.storage;
   this.refresh = that.refresh;
   this.devices = that.devices;
-  this.log("TccAccessory()" + this.devices);
+  this.log("TccAccessory()" + that.devices);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
 
