@@ -210,7 +210,7 @@ function TccAccessory(that, device, config) {
   this.usePermanentHolds = that.usePermanentHolds;
   this.storage = that.storage;
   this.refresh = that.refresh;
-  debug("TccAccessory()" + config);
+  debug("TccAccessory()",config);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
 
