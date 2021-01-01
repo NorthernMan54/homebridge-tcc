@@ -140,6 +140,8 @@ function updateStatus(accessory, device) {
   var service = accessory.getService(Service.Thermostat);
 
   // need to get config for this thermostat id
+  
+  debug(this.config['devices']);
   for (var deviceConfig in this.config['devices']) {
     if (deviceConfig.deviceID == device.ThermostatID) {
       this.deviceConfig = deviceConfig;
@@ -207,7 +209,8 @@ function TccAccessory(that, device) {
   this.storage = that.storage;
   this.refresh = that.refresh;
   this.devices = that.config['devices'];
-
+  debug(this.devices);
+  
   var uuid = UUIDGen.generate(this.name + " - TCC");
 
   // need to get config for this thermostat id
