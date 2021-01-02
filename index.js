@@ -145,25 +145,25 @@ function updateStatus(accessory, device) {
 
   // check if user wants separate temperature and humidity sensors
   if (accessory.getService(device.Name + " Temperature")) {
-    debug("updateStatus() " + device.Name + " InsideTemperature = true");
+    //debug("updateStatus() " + device.Name + " InsideTemperature = true");
     var InsideTemperature = accessory.getService(device.Name + " Temperature");
     InsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.CurrentTemperature);
   }
   if (accessory.getService("Outside Temperature")) {
-    debug("updateStatus() " + device.Name + " outsideTemperature = true");
+    //debug("updateStatus() " + device.Name + " outsideTemperature = true");
     var OutsideTemperature = accessory.getService("Outside Temperature");
     OutsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.OutsideTemperature);
   }
   if (accessory.getService(device.Name + " Humidity")) {
-    debug("updateStatus() " + device.Name + " insideHumidity = true");
+    //debug("updateStatus() " + device.Name + " insideHumidity = true");
     var InsideHumidity = accessory.getService(device.Name + " Humidity");
     InsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .updateValue(device.InsideHumidity);
   }
   if (accessory.getService("Outside Humidity")) {
-    debug("updateStatus() " + device.Name + " outsideHumidity = true");
+    //debug("updateStatus() " + device.Name + " outsideHumidity = true");
     var OutsideHumidity = accessory.getService("Outside Humidity");
 
     OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
