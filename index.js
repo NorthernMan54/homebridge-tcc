@@ -212,7 +212,8 @@ function TccAccessory(that, device, sensors, advanced) {
   var uuid = UUIDGen.generate(this.name + " - TCC");
   var createInsideSensors = false;
   var createOutsideSensors = false;
-
+  debug("outsideSensor count (" + this.name + "): " + outsideSensors);
+  
   // need to get config for this thermostat id
   switch (sensors) {
     case "none":
