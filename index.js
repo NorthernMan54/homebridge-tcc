@@ -239,7 +239,7 @@ function TccAccessory(that, device, sensors, advanced) {
         outsideSensors = 1;
       }
       break;
-    case: "advanced":
+    case "advanced":
       // default no sensors and look to thisDeviceConfig directives for logic on which sensors to instantiate
       createInsideSensors = false;
       createOutsideSensors = false;
