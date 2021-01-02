@@ -212,6 +212,7 @@ function TccAccessory(that, device, sensors, advanced) {
   var uuid = UUIDGen.generate(this.name + " - TCC");
   var createInsideSensors = false;
   var createOutsideSensors = false;
+  var thisDeviceConfig = [{"insideTemperature":false,"insideHumidity":false,"outsideTemperature":false,"outsideHumidity":false}];
   debug("outsideSensor count (" + this.name + "): " + outsideSensors);
   
   // need to get config for this thermostat id
@@ -244,11 +245,10 @@ function TccAccessory(that, device, sensors, advanced) {
       // default no sensors and look to thisDeviceConfig directives for logic on which sensors to instantiate
       createInsideSensors = false;
       createOutsideSensors = false;
-      var thisDeviceConfig = [{"insideTemperature":false,"insideHumidity":false,"outsideTemperature":false,"outsideHumidity":false}];
       if (advanced.length > 0) {
         for (let i = 0; i < advanced.length; i++) {
           if (advanced[i].deviceID == this.ThermostatID) {
-            var thisDeviceConfig = advanced[i];
+            thisDeviceConfig = advanced[i];
           }
         }
       }
