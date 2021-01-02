@@ -56,12 +56,22 @@ To resolve the issue, please follow the steps here. https://github.com/nodejs/no
 * `refresh` - Data polling interval in seconds, defaults to 60 seconds
 * `storage` - Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs
 * `usePermanentHolds` - If set to `true`, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to `false`, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off.
+* `sensors` - Enables temperature/humidity HomeKit sensors (useful for automations), options include: 
+  * `none` - No sensors will be shown (this is default setting)
+  * `all` - Enables all available temperature/humidity sensors
+  * `inside` - Enables temperature and humidity sensors for each thermostat
+  * `outside` - Enables a single set of outdoor temperature and humidity sensors
+  * `advanced` -  Allows for granular control of which temperature/humidity sensors to show, requires `devices` option (see below)
 * `debug` - Enables debug level logging from the plugin, defaults to `false`, to enable set to `true`
-* `devices` and `deviceID` - required to setup temperature/humidity sensors, `deviceID` is obtained by looking at your Homebridge logs for TCC entries when you restart (alternatively, if you login to Honeywell's site, you can see the id when using links for each thermostat)
-* `insideTemperature` - Enables separate temperature sensor in HomeKit (useful for automations), to enable set to `true` on each thermostat
-* `outsideTemperature` - Enables separate temperature sensor in HomeKit (useful for automations), to enable set to `true` on each thermostat
-* `insideHumidity` - Enables separate humidity sensor in HomeKit (useful for automations), to enable set to `true` on each thermostat
-* `outsideHumidity` - Enables separate humidity sensor in HomeKit (useful for automations), to enable set to `true` on each thermostat
+  
+# Advanced settings
+
+* Use with `"sensors": "advanced"` option above, allows for granular control over which sensors are shown by individual thermostat
+* `devices` and `deviceID` - See example below for config directives, `deviceID` is obtained by looking at your Homebridge logs for TCC entries when you restart (alternatively, if you login to Honeywell's site, you can see the id when using links for each thermostat)
+* `insideTemperature` - Enables thermostat temperature sensor in HomeKit, to enable set to `true` on each thermostat
+* `outsideTemperature` - Enables outdoor temperature sensor in HomeKit, to enable set to `true` on each thermostat
+* `insideHumidity` - Enables thermostat humidity sensor in HomeKit, to enable set to `true` on each thermostat
+* `outsideHumidity` - Enables outdoor humidity sensor in HomeKit, to enable set to `true` on each thermostat
 
 ```
 "platforms": [
@@ -70,12 +80,20 @@ To resolve the issue, please follow the steps here. https://github.com/nodejs/no
             "name" : "Thermostat",
             "username" : ".....",
             "password" : ".....",
+            "sensors" : "advanced",
             "devices": [{
                 "deviceID": "3910306",
                 "insideTemperature": true,
                 "insideHumidity": true,
                 "outsideTemperature": true,
                 "outsideHumidity": true
+            },
+            {
+                "deviceID": "3910307",
+                "insideTemperature": true,
+                "insideHumidity": true,
+                "outsideTemperature": false,
+                "outsideHumidity": false
             }]
         }
     ]
@@ -93,3 +111,4 @@ To resolve the issue, please follow the steps here. https://github.com/nodejs/no
 - simont77 - FakeGato History
 - hakusaro - Added support for permanent temperature holds.
 - jcgorla-dev - Validation of Honeywell's Prestige IAQ Thermostat
+- kylerove - Added support for separate temperature / humidity sensors
