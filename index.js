@@ -254,7 +254,10 @@ function TccAccessory(that, device, sensors, advanced) {
       }
       break;
   }
-
+  debug ("createInsideSensors: ",createInsideSensors);
+  debug ("createOutsideSensors: ", createOutsideSensors);
+  debug ("thisDeviceConfig: ", thisDeviceConfig);
+  
   if (!getAccessoryByThermostatID(this.ThermostatID)) {
     this.log("Adding TCC Device (deviceID="+this.ThermostatID+")", this.name);
     this.accessory = new Accessory(this.name, uuid, 10);
