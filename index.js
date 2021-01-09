@@ -52,8 +52,7 @@ tccPlatform.prototype.didFinishLaunching = function() {
   thermostats = new Tcc(this);
   thermostats.pollThermostat().then((devices) => {
     for (var zone in devices.hb) {
-      debug("Creating accessory for", devices.hb[zone].Name);
-      debug("Creating accessory for", devices.hb[zone].ThermostatID);
+      debug("Creating accessory for", devices.hb[zone].Name + "(" + devices.hb[zone].ThermostatID + ")");
       //debug("tccPlatform.prototype.didFinishLaunching()",this.devices)
       var newAccessory = new TccAccessory(this, devices.hb[zone], this.sensors);
       updateStatus(newAccessory, devices.hb[zone]);
@@ -237,7 +236,7 @@ function TccAccessory(that, device, sensors) {
   }
   debug ("createInsideSensors: ",createInsideSensors);
   
-  if (!getAccessoryByThermostatID(this.ThermostatID)) {
+  if (!getAccessoryByName(this.name)) {
     this.log("Adding TCC Device (deviceID="+this.ThermostatID+")", this.name);
     this.accessory = new Accessory(this.name, uuid, 10);
     this.accessory.log = that.log;
@@ -369,7 +368,7 @@ function TccSensorsAccessory(that, device, sensors) {
   this.device = device;
   this.storage = that.storage;
   this.refresh = that.refresh;
-  //debug("TccSensorsAccessory()",config);
+  debug("TccSensorsAccessory()",device);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
   
