@@ -350,7 +350,7 @@ function TccAccessory(that, device, sensors) {
           maxValue: 100
         });
     }
-    if (createInsideSensors  && !this.accessory.getService(this.name + " Humidity")) {
+    if (createInsideSensors && !this.accessory.getService(this.name + " Humidity")) {
       debug("TccAccessory() " + this.name + " InsideHumidity = true, adding sensor");
       this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
       
@@ -387,19 +387,19 @@ function TccSensorsAccessory(that, device, sensors) {
       .setCharacteristic(Characteristic.SerialNumber, hostname + "-" + this.name)
       .setCharacteristic(Characteristic.FirmwareRevision, require('./package.json').version);
     
-    // create outside sensors
+    // create outside temp sensor
     debug("TccSensorsAccessory() " + this.name + " outsideTemperature = true, existing sensor");
     this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "OUTSIDE");
-    
     this.OutsideTemperatureService
       .getCharacteristic(Characteristic.CurrentTemperature)
       .setProps({
         minValue: -100, // If you need this, you have major problems!!!!!
         maxValue: 100
       });
+    
+    // create outside humidity sensor
     debug("TccSensorsAccessory() " + this.name + " outsideHumidity = true, existing sensor");
     this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "OUTSIDE");
-    
     this.OutsideHumidityService
       .getCharacteristic(Characteristic.CurrentRelativeHumidity);
 
@@ -412,7 +412,7 @@ function TccSensorsAccessory(that, device, sensors) {
     myAccessories.push(this.accessory);
     return this.accessory;
   } else {
-    this.log("Existing TCC accessory (deviceID="+this.ThermostatID+")", this.name);
+    this.log("Existing TCC outside sensors accessory (deviceID="+this.ThermostatID+")", this.name);
     
     // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
     this.accessory = getAccessoryByName("Outside Sensors");
