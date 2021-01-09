@@ -61,43 +61,7 @@ To resolve the issue, please follow the steps here. https://github.com/nodejs/no
   * `all` - Enables all available temperature/humidity sensors
   * `inside` - Enables temperature and humidity sensors for each thermostat
   * `outside` - Enables a single set of outdoor temperature and humidity sensors
-  * `advanced` -  Allows for granular control of which temperature/humidity sensors to show, requires `devices` option (see below)
 * `debug` - Enables debug level logging from the plugin, defaults to `false`, to enable set to `true`
-  
-# Advanced settings
-
-* Use with `"sensors": "advanced"` option above, allows for granular control over which sensors are shown by individual thermostat
-* `devices` and `deviceID` - See example below for config directives, `deviceID` is obtained by looking at your Homebridge logs for TCC entries when you restart (alternatively, if you login to Honeywell's site, you can see the id when using links for each thermostat)
-* `insideTemperature` - Enables thermostat temperature sensor in HomeKit, to enable set to `true` on each thermostat
-* `outsideTemperature` - Enables outdoor temperature sensor in HomeKit, to enable set to `true` on each thermostat
-* `insideHumidity` - Enables thermostat humidity sensor in HomeKit, to enable set to `true` on each thermostat
-* `outsideHumidity` - Enables outdoor humidity sensor in HomeKit, to enable set to `true` on each thermostat
-
-```
-"platforms": [
-       {
-            "platform": "tcc",
-            "name" : "Thermostat",
-            "username" : ".....",
-            "password" : ".....",
-            "sensors" : "advanced",
-            "devices": [{
-                "deviceID": "3910306",
-                "insideTemperature": true,
-                "insideHumidity": true,
-                "outsideTemperature": true,
-                "outsideHumidity": true
-            },
-            {
-                "deviceID": "3910307",
-                "insideTemperature": true,
-                "insideHumidity": true,
-                "outsideTemperature": false,
-                "outsideHumidity": false
-            }]
-        }
-    ]
-```
 
 # Credits
 
@@ -111,4 +75,4 @@ To resolve the issue, please follow the steps here. https://github.com/nodejs/no
 - simont77 - FakeGato History
 - hakusaro - Added support for permanent temperature holds.
 - jcgorla-dev - Validation of Honeywell's Prestige IAQ Thermostat
-- kylerove - Added support for separate temperature / humidity sensors
+- kylerove - Added support for separate indoor and outdoor temperature / humidity sensors
