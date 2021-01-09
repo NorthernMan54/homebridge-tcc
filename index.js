@@ -61,7 +61,7 @@ tccPlatform.prototype.didFinishLaunching = function() {
       // does user want outside sensors created? if so, only create 1 set
       if ((this.sensors == "all" || this.sensors == "outside") && outsideSensors == 0) {
         var newSensorsAccessory = new TccSensorsAccessory(this, devices.hb[zone], this.sensors);
-        updateStatus(newAccessory, devices.hb[zone]);
+        updateStatus(newSensorsAccessory, devices.hb[zone]);
         outsideSensors = 1;
       }
     }
