@@ -110,7 +110,7 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
   }
 
   myAccessories.push(accessory);
-  debug(accessory)
+  debug(accessory.context)
 };
 
 function pollDevices() {
