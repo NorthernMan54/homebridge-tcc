@@ -166,16 +166,6 @@ function updateStatus(accessory, device) {
     var OutsideTemperature = accessory.getService("Outside Temperature");
     OutsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.OutsideTemperature);
-
-    // Fakegato Support
-    accessory.context.logEventCounter++;
-    if (!(accessory.context.logEventCounter % 10)) {
-      accessory.loggingService.addEntry({
-        time: moment().unix(),
-        temp: device.OutsideTemperature
-      });
-      accessory.context.logEventCounter = 0;
-    }
   }
   if (accessory.getService(device.Name + " Humidity")) {
     //debug("updateStatus() " + device.Name + " insideHumidity = true");
@@ -189,18 +179,45 @@ function updateStatus(accessory, device) {
 
     OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .updateValue(device.OutsideHumidity);
-
-    // Fakegato Support
+  }
+  
+  // fakegato for outside sensor
+  if (accessory.getService("Outside Humidity") & accessory.getService("Outside Temperature")) {
     accessory.context.logEventCounter++;
     if (!(accessory.context.logEventCounter % 10)) {
       accessory.loggingService.addEntry({
         time: moment().unix(),
-        humidity: device.OutsideHumidity
+        humidity: device.OutsideHumidity,
+        temp: device.OutsideTemperature,
+        pressure: 0
+      });
+      accessory.context.logEventCounter = 0;
+    }
+  }
+  else if (accessory.getService("Outside Humidity")) {    accessory.context.logEventCounter++;
+    if (!(accessory.context.logEventCounter % 10)) {
+      accessory.loggingService.addEntry({
+        time: moment().unix(),
+        humidity: device.OutsideHumidity,
+        temp: 0,
+        pressure: 0
+      });
+      accessory.context.logEventCounter = 0;
+    }
+  }
+  else if (accessory.getService("Outside Temperature")) {    accessory.context.logEventCounter++;
+    if (!(accessory.context.logEventCounter % 10)) {
+      accessory.loggingService.addEntry({
+        time: moment().unix(),
+        humidity: 0,
+        temp: device.OutsideTemperature,
+        pressure: 0
       });
       accessory.context.logEventCounter = 0;
     }
   }
   
+  // update thermostat
   if (accessory.getService(device.Name)) {
     var service = accessory.getService(Service.Thermostat);
     
