@@ -147,8 +147,6 @@ function updateStatus(accessory, device) {
     .updateValue(device.Name);
   accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Model)
     .updateValue(device.Model);
-    
-  var service = accessory.getService(Service.Thermostat);
 
   // check if user wants separate temperature and humidity sensors
   if (accessory.getService(device.Name + " Temperature")) {
@@ -218,6 +216,8 @@ function updateStatus(accessory, device) {
   }
   
   if (accessory.getService(device.Name)) {
+    var service = accessory.getService(Service.Thermostat);
+    
     service.getCharacteristic(Characteristic.Name)
       .updateValue(device.Name);
     service.getCharacteristic(Characteristic.TargetTemperature)
