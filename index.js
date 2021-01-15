@@ -122,7 +122,7 @@ function pollDevices() {
         this.log("ERROR: no data for", accessory.displayName);
         // debug("accessory", accessory);
         
-        if (accessory.getService(Service.Thermostat) {
+        if (accessory.getService(Service.Thermostat)) {
           accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
             .updateValue(new Error("Status missing for thermostat"));
           }
@@ -139,7 +139,7 @@ function pollDevices() {
       this.log("ERROR: pollDevices", err);
     }
     myAccessories.forEach(function(accessory) {
-      if (accessory.getService(Service.Thermostat) {
+      if (accessory.getService(Service.Thermostat)) {
         accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
           .updateValue(new Error("Status missing for thermostat"));
         }
