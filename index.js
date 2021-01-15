@@ -121,8 +121,11 @@ function pollDevices() {
       } else {
         this.log("ERROR: no data for", accessory.displayName);
         // debug("accessory", accessory);
-        accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
-          .updateValue(new Error("Status missing for thermostat"));
+        
+        if (accessory.getService(Service.Thermostat) {
+          accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
+            .updateValue(new Error("Status missing for thermostat"));
+          }
       }
     }.bind(this));
   }).catch((err) => {
@@ -136,8 +139,10 @@ function pollDevices() {
       this.log("ERROR: pollDevices", err);
     }
     myAccessories.forEach(function(accessory) {
-      accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
-        .updateValue(new Error("Status missing for thermostat"));
+      if (accessory.getService(Service.Thermostat) {
+        accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
+          .updateValue(new Error("Status missing for thermostat"));
+        }
     });
   });
 }
