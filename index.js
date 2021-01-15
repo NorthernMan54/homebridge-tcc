@@ -103,10 +103,12 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
       storage: this.storage,
       minutes: this.refresh * 10 / 60
     });
+    
+    // only attach this to the actual thermostat accessories, not the sensors accessory
+    accessory.context.ChangeThermostat = new ChangeThermostat(accessory);
+    debug("configureAccessory", accessory.context.ChangeThermostat);
   }
 
-  accessory.context.ChangeThermostat = new ChangeThermostat(accessory);
-  // debug("CA", accessory.context.ChangeThermostat);
   myAccessories.push(accessory);
 };
 
@@ -207,14 +209,14 @@ function updateStatus(accessory, device) {
 
 function TccAccessory(that, device, sensors) {
   this.log = that.log;
-  // this.log("Adding TCC Device", device.DeviceName);
+  this.log("Adding TCC Device", device.DeviceName);
   this.name = device.Name;
   this.ThermostatID = device.ThermostatID;
   this.device = device;
   this.usePermanentHolds = that.usePermanentHolds;
   this.storage = that.storage;
   this.refresh = that.refresh;
-  //debug("TccAccessory()",config);
+  debug("TccAccessory()",config);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
   var createInsideSensors = false;
@@ -362,7 +364,7 @@ function TccAccessory(that, device, sensors) {
 
 function TccSensorsAccessory(that, device, sensors) {
   this.log = that.log;
-  // this.log("Adding TCC Device", device.DeviceName);
+  this.log("Adding TCC Device", device.DeviceName);
   this.name = "Outside Sensors"
   this.ThermostatID = device.ThermostatID;
   this.device = device;
