@@ -209,7 +209,7 @@ function updateStatus(accessory, device) {
 
 function TccAccessory(that, device, sensors) {
   this.log = that.log;
-  this.log("Adding TCC Device", device.DeviceName);
+  this.log("Adding TCC Device", device.Name);
   this.name = device.Name;
   this.ThermostatID = device.ThermostatID;
   this.device = device;
@@ -364,7 +364,7 @@ function TccAccessory(that, device, sensors) {
 
 function TccSensorsAccessory(that, device, sensors) {
   this.log = that.log;
-  this.log("Adding TCC Device", device.DeviceName);
+  this.log("Adding TCC Sensors Device");
   this.name = "Outside Sensors"
   this.ThermostatID = device.ThermostatID;
   this.device = device;
