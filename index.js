@@ -73,7 +73,7 @@ tccPlatform.prototype.didFinishLaunching = function() {
 
 tccPlatform.prototype.configureAccessory = function(accessory) {
   this.log("configureAccessory %s", accessory.displayName);
-
+  debug(accessory.context)
   if (accessory.getService(Service.Thermostat)) {
     accessory.log = this.log;
     accessory
