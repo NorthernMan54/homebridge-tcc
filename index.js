@@ -216,7 +216,7 @@ function TccAccessory(that, device, sensors) {
   this.usePermanentHolds = that.usePermanentHolds;
   this.storage = that.storage;
   this.refresh = that.refresh;
-  debug("TccAccessory()",config);
+  debug("TccAccessory()",device);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
   var createInsideSensors = false;
