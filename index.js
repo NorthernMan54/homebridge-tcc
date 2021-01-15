@@ -156,18 +156,48 @@ function updateStatus(accessory, device) {
     var InsideTemperature = accessory.getService(device.Name + " Temperature");
     InsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.CurrentTemperature);
+
+    // Fakegato Support
+    accessory.context.logEventCounter++;
+    if (!(accessory.context.logEventCounter % 10)) {
+      accessory.loggingService.addEntry({
+        time: moment().unix(),
+        temp: device.CurrentTemperature
+      });
+      accessory.context.logEventCounter = 0;
+    }
   }
   if (accessory.getService("Outside Temperature")) {
     //debug("updateStatus() " + device.Name + " outsideTemperature = true");
     var OutsideTemperature = accessory.getService("Outside Temperature");
     OutsideTemperature.getCharacteristic(Characteristic.CurrentTemperature)
       .updateValue(device.OutsideTemperature);
+
+    // Fakegato Support
+    accessory.context.logEventCounter++;
+    if (!(accessory.context.logEventCounter % 10)) {
+      accessory.loggingService.addEntry({
+        time: moment().unix(),
+        temp: device.OutsideTemperature
+      });
+      accessory.context.logEventCounter = 0;
+    }
   }
   if (accessory.getService(device.Name + " Humidity")) {
     //debug("updateStatus() " + device.Name + " insideHumidity = true");
     var InsideHumidity = accessory.getService(device.Name + " Humidity");
     InsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .updateValue(device.InsideHumidity);
+
+    // Fakegato Support
+    accessory.context.logEventCounter++;
+    if (!(accessory.context.logEventCounter % 10)) {
+      accessory.loggingService.addEntry({
+        time: moment().unix(),
+        humidity: device.InsideHumidity
+      });
+      accessory.context.logEventCounter = 0;
+    }
   }
   if (accessory.getService("Outside Humidity")) {
     //debug("updateStatus() " + device.Name + " outsideHumidity = true");
@@ -175,6 +205,16 @@ function updateStatus(accessory, device) {
 
     OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .updateValue(device.OutsideHumidity);
+
+    // Fakegato Support
+    accessory.context.logEventCounter++;
+    if (!(accessory.context.logEventCounter % 10)) {
+      accessory.loggingService.addEntry({
+        time: moment().unix(),
+        humidity: device.OutsideHumidity
+      });
+      accessory.context.logEventCounter = 0;
+    }
   }
   
   if (accessory.getService(device.Name)) {
@@ -192,31 +232,31 @@ function updateStatus(accessory, device) {
       .updateValue(device.CoolingThresholdTemperature);
     service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
       .updateValue(device.HeatingThresholdTemperature);
-  }
-  
-  // Fakegato Support
-  accessory.context.logEventCounter++;
-  if (!(accessory.context.logEventCounter % 10)) {
-    accessory.loggingService.addEntry({
-      time: moment().unix(),
-      currentTemp: device.CurrentTemperature,
-      setTemp: device.TargetTemperature,
-      valvePosition: device.CurrentHeatingCoolingState
-    });
-    accessory.context.logEventCounter = 0;
+      
+    // Fakegato Support
+    accessory.context.logEventCounter++;
+    if (!(accessory.context.logEventCounter % 10)) {
+      accessory.loggingService.addEntry({
+        time: moment().unix(),
+        currentTemp: device.CurrentTemperature,
+        setTemp: device.TargetTemperature,
+        valvePosition: device.CurrentHeatingCoolingState
+      });
+      accessory.context.logEventCounter = 0;
+    }
   }
 }
 
 function TccAccessory(that, device, sensors) {
   this.log = that.log;
-  this.log("Adding TCC Device", device.Name);
+  //this.log("Adding TCC Device", device.Name);
   this.name = device.Name;
   this.ThermostatID = device.ThermostatID;
   this.device = device;
   this.usePermanentHolds = that.usePermanentHolds;
   this.storage = that.storage;
   this.refresh = that.refresh;
-  debug("TccAccessory()",device);
+  //debug("TccAccessory()",device);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
   var createInsideSensors = false;
@@ -364,13 +404,13 @@ function TccAccessory(that, device, sensors) {
 
 function TccSensorsAccessory(that, device, sensors) {
   this.log = that.log;
-  this.log("Adding TCC Sensors Device");
+  //this.log("Adding TCC Sensors Device");
   this.name = "Outside Sensors"
   this.ThermostatID = device.ThermostatID;
   this.device = device;
   this.storage = that.storage;
   this.refresh = that.refresh;
-  debug("TccSensorsAccessory()",device);
+  //debug("TccSensorsAccessory()",device);
   
   var uuid = UUIDGen.generate(this.name + " - TCC");
   
