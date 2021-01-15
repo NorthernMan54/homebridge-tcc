@@ -289,6 +289,7 @@ function TccAccessory(that, device, sensors) {
     this.accessory = new Accessory(this.name, uuid, 10);
     this.accessory.log = that.log;
     this.accessory.context.ThermostatID = device.ThermostatID;
+    this.accessory.context.name = this.name;
     this.accessory.context.logEventCounter = 9; // Update fakegato on startup
 
     this.accessory.getService(Service.AccessoryInformation)
