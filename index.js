@@ -113,7 +113,7 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
   if (accessory.getService("Outside Humidity") | accessory.getService("Outside Temperature")) {
     debug("FakeGatoHistoryService", this.storage, this.refresh);
     accessory.context.logEventCounter = 9; // Update fakegato on startup
-    accessory.loggingService = new FakeGatoHistoryService("thermo", accessory, {
+    accessory.loggingService = new FakeGatoHistoryService("weather", accessory, {
       storage: this.storage,
       minutes: this.refresh * 10 / 60
     });
