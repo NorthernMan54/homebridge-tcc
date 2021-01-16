@@ -111,6 +111,7 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
   
   // add fakegato logging for 
   if (accessory.displayName == "Outside Sensors") {
+    debug(accessory);
     debug("FakeGatoHistoryService", this.storage, this.refresh);
     accessory.context.logEventCounter = 9; // Update fakegato on startup
     accessory.loggingService = new FakeGatoHistoryService("weather", accessory, {
@@ -192,36 +193,12 @@ function updateStatus(accessory, device) {
   }
   
   // fakegato for outside sensor
-  if (accessory.getService("Outside Humidity") & accessory.getService("Outside Temperature")) {
+  if (accessory.displayName == "Outside Sensors") {
     accessory.context.logEventCounter++;
     if (!(accessory.context.logEventCounter % 10)) {
       accessory.loggingService.addEntry({
         time: moment().unix(),
         humidity: device.OutsideHumidity,
-        temp: device.OutsideTemperature,
-        pressure: 0
-      });
-      accessory.context.logEventCounter = 0;
-    }
-  }
-  else if (accessory.getService("Outside Humidity")) {
-    accessory.context.logEventCounter++;
-    if (!(accessory.context.logEventCounter % 10)) {
-      accessory.loggingService.addEntry({
-        time: moment().unix(),
-        humidity: device.OutsideHumidity,
-        temp: 0,
-        pressure: 0
-      });
-      accessory.context.logEventCounter = 0;
-    }
-  }
-  else if (accessory.getService("Outside Temperature")) {
-    accessory.context.logEventCounter++;
-    if (!(accessory.context.logEventCounter % 10)) {
-      accessory.loggingService.addEntry({
-        time: moment().unix(),
-        humidity: 0,
         temp: device.OutsideTemperature,
         pressure: 0
       });
