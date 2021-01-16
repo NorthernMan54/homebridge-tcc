@@ -372,7 +372,7 @@ function TccAccessory(that, device, sensors) {
     this.log("Existing TCC accessory (deviceID="+this.ThermostatID+")", this.name);
     
     // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
-    this.accessory = getAccessoryByThermostatID(this.ThermostatID);
+    this.accessory = getAccessoryByName(this.name);
     if (createInsideSensors && !this.accessory.getService(this.name + " Temperature")) {
       debug("TccAccessory() " + this.name + " InsideTemperature = true, adding sensor");
       this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
