@@ -56,7 +56,7 @@ tccPlatform.prototype.didFinishLaunching = function() {
       //debug("tccPlatform.prototype.didFinishLaunching()",this.devices)
       var newAccessory = new TccAccessory(this, devices.hb[zone], this.sensors);
       updateStatus(newAccessory, devices.hb[zone]);
-      
+
       // does user want outside sensors created? if so, only create 1 set
       if ((this.sensors == "all" || this.sensors == "outside") && outsideSensors == 0) {
         var newSensorsAccessory = new TccSensorsAccessory(this, devices.hb[zone], this.sensors);
@@ -103,13 +103,13 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
       storage: this.storage,
       minutes: this.refresh * 10 / 60
     });
-    
+
     // only attach this to the actual thermostat accessories, not the sensors accessory
     accessory.context.ChangeThermostat = new ChangeThermostat(accessory);
     debug("configureAccessory", accessory.context.ChangeThermostat);
   }
-  
-  // add fakegato logging for 
+
+  // add fakegato logging for
   if (accessory.displayName == "Outside Sensors") {
     debug(accessory);
     debug("FakeGatoHistoryService", this.storage, this.refresh);
@@ -119,7 +119,7 @@ tccPlatform.prototype.configureAccessory = function(accessory) {
       minutes: this.refresh * 10 / 60
     });
   }
-  
+
   myAccessories.push(accessory);
   //debug(accessory.context)
 };
@@ -133,7 +133,7 @@ function pollDevices() {
       } else {
         this.log("ERROR: no data for", accessory.displayName);
         // debug("accessory", accessory);
-        
+
         if (accessory.getService(Service.Thermostat)) {
           accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
             .updateValue(new Error("Status missing for thermostat"));
@@ -191,7 +191,7 @@ function updateStatus(accessory, device) {
     OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .updateValue(device.OutsideHumidity);
   }
-  
+
   // fakegato for outside sensor
   if (accessory.displayName == "Outside Sensors") {
     accessory.context.logEventCounter++;
@@ -205,11 +205,11 @@ function updateStatus(accessory, device) {
       accessory.context.logEventCounter = 0;
     }
   }
-  
+
   // update thermostat
   if (accessory.getService(device.Name)) {
     var service = accessory.getService(Service.Thermostat);
-    
+
     service.getCharacteristic(Characteristic.Name)
       .updateValue(device.Name);
     service.getCharacteristic(Characteristic.TargetTemperature)
@@ -224,7 +224,7 @@ function updateStatus(accessory, device) {
       .updateValue(device.CoolingThresholdTemperature);
     service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
       .updateValue(device.HeatingThresholdTemperature);
-      
+
     // Fakegato Support
     accessory.context.logEventCounter++;
     if (!(accessory.context.logEventCounter % 10)) {
@@ -249,10 +249,10 @@ function TccAccessory(that, device, sensors) {
   this.storage = that.storage;
   this.refresh = that.refresh;
   //debug("TccAccessory()",device);
-  
+
   var uuid = UUIDGen.generate(this.name + " - TCC");
   var createInsideSensors = false;
-  
+
   // need to get config for this thermostat id
   switch (sensors) {
     case "none":
@@ -269,7 +269,7 @@ function TccAccessory(that, device, sensors) {
       break;
   }
   debug ("createInsideSensors: ",createInsideSensors);
-  
+
   if (!getAccessoryByName(this.name)) {
     this.log("Adding TCC Device (deviceID="+this.ThermostatID+")", this.name);
     this.accessory = new Accessory(this.name, uuid, 10);
@@ -285,7 +285,7 @@ function TccAccessory(that, device, sensors) {
       .setCharacteristic(Characteristic.FirmwareRevision, require('./package.json').version);
 
     this.accessory.addService(Service.Thermostat, this.name);
-    
+
     // check if user wants separate temperature and humidity sensors by zone/thermostat
     if (createInsideSensors) {
       debug("TccAccessory() " + this.name + " InsideTemperature = true, existing sensor");
@@ -296,7 +296,7 @@ function TccAccessory(that, device, sensors) {
           minValue: -100, // If you need this, you have major problems!!!!!
           maxValue: 100
         });
-        
+
       debug("TccAccessory() " + this.name + " insideHumidity = true, existing sensor");
       this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
       this.InsideHumidityService
@@ -370,13 +370,13 @@ function TccAccessory(that, device, sensors) {
     return this.accessory;
   } else {
     this.log("Existing TCC accessory (deviceID="+this.ThermostatID+")", this.name);
-    
+
     // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
     this.accessory = getAccessoryByName(this.name);
     if (createInsideSensors && !this.accessory.getService(this.name + " Temperature")) {
       debug("TccAccessory() " + this.name + " InsideTemperature = true, adding sensor");
       this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
-      
+
       this.InsideTemperatureService
         .getCharacteristic(Characteristic.CurrentTemperature)
         .setProps({
@@ -387,7 +387,7 @@ function TccAccessory(that, device, sensors) {
     if (createInsideSensors && !this.accessory.getService(this.name + " Humidity")) {
       debug("TccAccessory() " + this.name + " InsideHumidity = true, adding sensor");
       this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
-      
+
       this.InsideHumidityService
         .getCharacteristic(Characteristic.CurrentRelativeHumidity);
     }
@@ -404,9 +404,9 @@ function TccSensorsAccessory(that, device, sensors) {
   this.storage = that.storage;
   this.refresh = that.refresh;
   //debug("TccSensorsAccessory()",device);
-  
+
   var uuid = UUIDGen.generate(this.name + " - TCC");
-  
+
   if (!getAccessoryByName(this.name)) {
     this.log("Adding TCC Outside Sensors (deviceID="+this.ThermostatID+")", this.name);
     this.accessory = new Accessory(this.name, uuid, 10);
@@ -420,7 +420,7 @@ function TccSensorsAccessory(that, device, sensors) {
       .setCharacteristic(Characteristic.Model, device.Model)
       .setCharacteristic(Characteristic.SerialNumber, hostname + "-" + this.name)
       .setCharacteristic(Characteristic.FirmwareRevision, require('./package.json').version);
-    
+
     // create outside temp sensor
     debug("TccSensorsAccessory() " + this.name + " outsideTemperature = true, existing sensor");
     this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "Outside");
@@ -430,7 +430,7 @@ function TccSensorsAccessory(that, device, sensors) {
         minValue: -100, // If you need this, you have major problems!!!!!
         maxValue: 100
       });
-    
+
     // create outside humidity sensor
     debug("TccSensorsAccessory() " + this.name + " outsideHumidity = true, existing sensor");
     this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
@@ -447,13 +447,13 @@ function TccSensorsAccessory(that, device, sensors) {
     return this.accessory;
   } else {
     this.log("Existing TCC outside sensors accessory (deviceID="+this.ThermostatID+")", this.name);
-    
+
     // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
     this.accessory = getAccessoryByName("Outside Sensors");
     if (!this.accessory.getService("Outside Temperature")) {
       debug("TccSensorsAccessory() " + this.name + " OutsideTemperature = true, adding sensor");
       this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "Outside");
-      
+
       this.OutsideTemperatureService
         .getCharacteristic(Characteristic.CurrentTemperature)
         .setProps({
@@ -464,7 +464,7 @@ function TccSensorsAccessory(that, device, sensors) {
     if (!this.accessory.getService("Outside Humidity")) {
       debug("TccSensorsAccessory() " + this.name + " outsideHumidity = true, adding sensor");
       this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
-      
+
       this.OutsideHumidityService
         .getCharacteristic(Characteristic.CurrentRelativeHumidity);
     }
@@ -481,7 +481,7 @@ function setTargetTemperature(value, callback) {
   }).then((thermostat) => {
     // debug("setTargetTemperature", this, thermostat);
     updateStatus(this, thermostat);
-    callback(null, value);
+    callback(null);
   }).catch((error) => {
     callback(error);
   });
@@ -495,7 +495,7 @@ function setTargetHeatingCooling(value, callback) {
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
     updateStatus(this, thermostat);
-    callback(null, value);
+    callback(null);
   }).catch((error) => {
     callback(error);
   });
@@ -508,7 +508,7 @@ function setHeatingThresholdTemperature(value, callback) {
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
     updateStatus(this, thermostat);
-    callback(null, value);
+    callback(null);
   }).catch((error) => {
     callback(error);
   });
@@ -521,7 +521,7 @@ function setCoolingThresholdTemperature(value, callback) {
   }).then((thermostat) => {
     // debug("setTargetHeatingCooling", this, thermostat);
     updateStatus(this, thermostat);
-    callback(null, value);
+    callback(null);
   }).catch((error) => {
     callback(error);
   });
