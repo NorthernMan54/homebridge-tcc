@@ -28,7 +28,7 @@ module.exports = function(homebridge) {
 function tccPlatform(log, config, api) {
   this.username = config['username'];
   this.password = config['password'];
-  this.refresh = config['refresh'] || 60; // Update every minute
+  this.refresh = config['refresh'] || 300; // Update every minute
   this.usePermanentHolds = config['usePermanentHolds'] || false;
   this.log = log;
   this.sensors = config['sensors'];
