@@ -28,7 +28,7 @@ module.exports = function(homebridge) {
 function tccPlatform(log, config, api) {
   this.username = config['username'];
   this.password = config['password'];
-  this.refresh = config['refresh'] || 300; // Update every minute
+  this.refresh = config['refresh'] || 600; // Lower than 10 minutes triggers request rate limiter on Honeywell site.
   this.usePermanentHolds = config['usePermanentHolds'] || false;
   this.log = log;
   this.sensors = config['sensors'];

@@ -28,11 +28,11 @@
       },
       "refresh": {
         "title": "Refresh Token",
-        "default": 300,
+        "default": 600,
         "type": "integer",
         "minimum": 30,
         "maximum": 3600,
-        "description": "Data polling interval in seconds, defaults to 5 minutes."
+        "description": "Data polling interval in seconds, defaults to 10 minutes.  Setting lower than 10 minutes may trigger request rate limiter on Honeywell site."
       },
       "storage": {
         "title": "Storage",

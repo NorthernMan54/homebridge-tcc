@@ -53,10 +53,10 @@ To resolve the issue, please follow the steps here. https://github.com/nodejs/no
 
 # Optional settings
 
-* `refresh` - Data polling interval in seconds, defaults to 60 seconds
+* `refresh` - Data polling interval in seconds, defaults to 10 minutes.  Setting lower than 10 minutes may trigger request rate limiter on Honeywell backend.
 * `storage` - Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs
 * `usePermanentHolds` - If set to `true`, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to `false`, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off.
-* `sensors` - Enables temperature/humidity HomeKit sensors (useful for automations), options include: 
+* `sensors` - Enables temperature/humidity HomeKit sensors (useful for automations), options include:
   * `none` - No sensors will be shown (this is default setting)
   * `all` - Enables all available temperature/humidity sensors
   * `inside` - Enables temperature and humidity sensors for each thermostat
