@@ -24,7 +24,7 @@
     "easy-soap-request": ">=0.0.0",
     "fakegato-history": "^0.5.6",
     "moment": ">2.20.1",
-    "p-queue": ">=6.4.0",
+    "p-queue": "^6.6.2",
     "request": "^2.88.2",
     "xml2json": ">=0.0.0"
   }
