@@ -248,7 +248,7 @@ function TccAccessory(that, device, sensors) {
   this.usePermanentHolds = that.usePermanentHolds;
   this.storage = that.storage;
   this.refresh = that.refresh;
-  //debug("TccAccessory()",device);
+  debug("TccAccessory()", device);
 
   var uuid = UUIDGen.generate(this.name + " - TCC");
   var createInsideSensors = false;
@@ -268,7 +268,6 @@ function TccAccessory(that, device, sensors) {
       createInsideSensors = false;
       break;
   }
-  debug ("createInsideSensors: ",createInsideSensors);
 
   if (!getAccessoryByName(this.name)) {
     this.log("Adding TCC Device (deviceID="+this.ThermostatID+")", this.name);
@@ -287,6 +286,7 @@ function TccAccessory(that, device, sensors) {
     this.accessory.addService(Service.Thermostat, this.name);
 
     // check if user wants separate temperature and humidity sensors by zone/thermostat
+    debug ("createInsideSensors: ",createInsideSensors);
     if (createInsideSensors) {
       debug("TccAccessory() " + this.name + " InsideTemperature = true, existing sensor");
       this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
@@ -303,7 +303,6 @@ function TccAccessory(that, device, sensors) {
         .getCharacteristic(Characteristic.CurrentRelativeHumidity);
     }
 
-    // debug("HB", this.device, this.ThermostatID);
     //       .setProps({validValues: hbValues.TargetHeatingCoolingStateValidValues})
     this.accessory
       .getService(Service.Thermostat)
@@ -370,9 +369,10 @@ function TccAccessory(that, device, sensors) {
     return this.accessory;
   } else {
     this.log("Existing TCC accessory (deviceID="+this.ThermostatID+")", this.name);
-
     // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
     this.accessory = getAccessoryByName(this.name);
+    debug("Heating Threshold", this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.HeatingThresholdTemperature).props);
+    debug("Cooling Threshold", this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.CoolingThresholdTemperature).props);
     if (createInsideSensors && !this.accessory.getService(this.name + " Temperature")) {
       debug("TccAccessory() " + this.name + " InsideTemperature = true, adding sensor");
       this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
