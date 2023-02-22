@@ -59,6 +59,7 @@ tccPlatform.prototype.didFinishLaunching = function() {
 
       // does user want outside sensors created? if so, only create 1 set
       if ((this.sensors == "all" || this.sensors == "outside") && outsideSensors == 0) {
+        // Check for invalid humidity value
         if (devices.hb[zone].OutsideHumidity == 128) {
           debug("Invalid outside humidity value for", devices.hb[zone].Name + "(" + devices.hb[zone].ThermostatID + ")");
         } else {
@@ -284,7 +285,7 @@ function TccAccessory(that, device, sensors) {
       break;
   }
 
-  // Check for invalid humidity values
+  // Check for invalid humidity value
   if (device.InsideHumidity == 128) {
     debug("Invalid inside humidity value for", device.Name + "(" + device.ThermostatID + ")");
     createInsideHumiditySensors = false;
@@ -309,24 +310,22 @@ function TccAccessory(that, device, sensors) {
     // check if user wants separate temperature and humidity sensors by zone/thermostat
     debug("createInsideHumiditySensors: ", createInsideHumiditySensors);
     debug("createInsideTemperatureSensors: ", createInsideTemperatureSensors);
-    if (createInsideHumiditySensors || createInsideTemperatureSensors) {
-      if (createInsideTemperatureSensors) {
-        // debug("TccAccessory() " + this.name + " InsideTemperature = true, existing sensor");
-        this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
-        this.InsideTemperatureService
-            .getCharacteristic(Characteristic.CurrentTemperature)
-            .setProps({
-              minValue: -100, // If you need this, you have major problems!!!!!
-              maxValue: 100
-            });
-      }
+    if (createInsideTemperatureSensors) {
+      // debug("TccAccessory() " + this.name + " InsideTemperature = true, existing sensor");
+      this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
+      this.InsideTemperatureService
+          .getCharacteristic(Characteristic.CurrentTemperature)
+          .setProps({
+            minValue: -100, // If you need this, you have major problems!!!!!
+            maxValue: 100
+          });
+    }
 
-      if (createInsideHumiditySensors) {
-        debug("TccAccessory() " + this.name + " insideHumidity = true, existing sensor");
-        this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
-        this.InsideHumidityService
-            .getCharacteristic(Characteristic.CurrentRelativeHumidity);
-      }
+    if (createInsideHumiditySensors) {
+      debug("TccAccessory() " + this.name + " insideHumidity = true, existing sensor");
+      this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
+      this.InsideHumidityService
+          .getCharacteristic(Characteristic.CurrentRelativeHumidity);
     }
 
     //       .setProps({validValues: hbValues.TargetHeatingCoolingStateValidValues})
