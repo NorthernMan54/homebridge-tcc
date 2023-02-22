@@ -59,9 +59,13 @@ tccPlatform.prototype.didFinishLaunching = function() {
 
       // does user want outside sensors created? if so, only create 1 set
       if ((this.sensors == "all" || this.sensors == "outside") && outsideSensors == 0) {
-        var newSensorsAccessory = new TccSensorsAccessory(this, devices.hb[zone], this.sensors);
-        updateStatus(newSensorsAccessory, devices.hb[zone]);
-        outsideSensors = 1;
+        if (devices.hb[zone].OutsideHumidity == 128) {
+          debug("Invalid outside humidity value for", devices.hb[zone].Name + "(" + devices.hb[zone].ThermostatID + ")");
+        } else {
+          var newSensorsAccessory = new TccSensorsAccessory(this, devices.hb[zone], this.sensors);
+          updateStatus(newSensorsAccessory, devices.hb[zone]);
+          outsideSensors = 1;
+        }
       }
     }
   }).catch((err) => {
@@ -253,31 +257,37 @@ function TccAccessory(that, device, sensors) {
   // debug("TccAccessory()", device);
 
   var uuid = UUIDGen.generate(this.name + " - TCC");
-  var createInsideSensors = false;
+  var createInsideHumiditySensors = false;
   var createInsideTemperatureSensors = false;
 
   // need to get config for this thermostat id
   switch (sensors) {
     case "none":
-      createInsideSensors = false;
+      createInsideHumiditySensors = false;
       createInsideTemperatureSensors = false;
       break;
     case "all":
-      createInsideSensors = true;
+      createInsideHumiditySensors = true;
       createInsideTemperatureSensors = true;
       break;
     case "inside":
-      createInsideSensors = true;
+      createInsideHumiditySensors = true;
       createInsideTemperatureSensors = true;
       break;
     case "insideHumidity":
-      createInsideSensors = true;
+      createInsideHumiditySensors = true;
       createInsideTemperatureSensors = false;
       break;
     case "outside":
-      createInsideSensors = false;
+      createInsideHumiditySensors = false;
       createInsideTemperatureSensors = false;
       break;
+  }
+
+  // Check for invalid humidity values
+  if (device.InsideHumidity == 128) {
+    debug("Invalid inside humidity value for", device.Name + "(" + device.ThermostatID + ")");
+    createInsideHumiditySensors = false;
   }
 
   if (!getAccessoryByName(this.name)) {
@@ -297,9 +307,9 @@ function TccAccessory(that, device, sensors) {
     this.accessory.addService(Service.Thermostat, this.name);
 
     // check if user wants separate temperature and humidity sensors by zone/thermostat
-    debug("createInsideSensors: ", createInsideSensors);
+    debug("createInsideHumiditySensors: ", createInsideHumiditySensors);
     debug("createInsideTemperatureSensors: ", createInsideTemperatureSensors);
-    if (createInsideSensors) {
+    if (createInsideHumiditySensors || createInsideTemperatureSensors) {
       if (createInsideTemperatureSensors) {
         // debug("TccAccessory() " + this.name + " InsideTemperature = true, existing sensor");
         this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
@@ -311,10 +321,12 @@ function TccAccessory(that, device, sensors) {
             });
       }
 
-      debug("TccAccessory() " + this.name + " insideHumidity = true, existing sensor");
-      this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
-      this.InsideHumidityService
-        .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+      if (createInsideHumiditySensors) {
+        debug("TccAccessory() " + this.name + " insideHumidity = true, existing sensor");
+        this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
+        this.InsideHumidityService
+            .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+      }
     }
 
     //       .setProps({validValues: hbValues.TargetHeatingCoolingStateValidValues})
@@ -388,7 +400,7 @@ function TccAccessory(that, device, sensors) {
     this.accessory = getAccessoryByName(this.name);
     debug("Heating Threshold", this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.HeatingThresholdTemperature).props);
     debug("Cooling Threshold", this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.CoolingThresholdTemperature).props);
-    if (createInsideSensors && createInsideTemperatureSensors && !this.accessory.getService(this.name + " Temperature")) {
+    if (createInsideTemperatureSensors && !this.accessory.getService(this.name + " Temperature")) {
       debug("TccAccessory() " + this.name + " InsideTemperature = true, adding sensor");
       this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
 
@@ -398,16 +410,16 @@ function TccAccessory(that, device, sensors) {
           minValue: -100, // If you need this, you have major problems!!!!!
           maxValue: 100
         });
-    } else if ((!createInsideSensors || !createInsideTemperatureSensors) && this.accessory.getService(this.name + " Temperature")) {
+    } else if (!createInsideTemperatureSensors && this.accessory.getService(this.name + " Temperature")) {
       this.accessory.removeService(this.accessory.getService(this.name + " Temperature"));
     }
-    if (createInsideSensors && !this.accessory.getService(this.name + " Humidity")) {
+    if (createInsideHumiditySensors && !this.accessory.getService(this.name + " Humidity")) {
       debug("TccAccessory() " + this.name + " InsideHumidity = true, adding sensor");
       this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
 
       this.InsideHumidityService
         .getCharacteristic(Characteristic.CurrentRelativeHumidity);
-    } else if (!createInsideSensors && this.accessory.getService(this.name + " Humidity")) {
+    } else if (!createInsideHumiditySensors && this.accessory.getService(this.name + " Humidity")) {
       this.accessory.removeService(this.accessory.getService(this.name + " Humidity"));
     }
     return this.accessory;
