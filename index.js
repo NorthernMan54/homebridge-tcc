@@ -386,6 +386,8 @@ function TccAccessory(that, device, sensors) {
           minValue: -100, // If you need this, you have major problems!!!!!
           maxValue: 100
         });
+    } else if (!createInsideSensors && this.accessory.getService(this.name + " Temperature")) {
+      this.accessory.removeService(this.accessory.getService(this.name + " Temperature"));
     }
     if (createInsideSensors && !this.accessory.getService(this.name + " Humidity")) {
       debug("TccAccessory() " + this.name + " InsideHumidity = true, adding sensor");
@@ -393,6 +395,8 @@ function TccAccessory(that, device, sensors) {
 
       this.InsideHumidityService
         .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+    } else if (!createInsideSensors && this.accessory.getService(this.name + " Humidity")) {
+      this.accessory.removeService(this.accessory.getService(this.name + " Humidity"));
     }
     return this.accessory;
   }
