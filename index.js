@@ -10,7 +10,7 @@ const moment = require('moment');
 
 var myAccessories = [];
 var thermostats;
-var outsideSensors = 0;
+var outsideSensorsCreated = false;
 
 module.exports = function(homebridge) {
   Accessory = homebridge.platformAccessory;
@@ -57,15 +57,29 @@ tccPlatform.prototype.didFinishLaunching = function() {
       var newAccessory = new TccAccessory(this, devices.hb[zone], this.sensors);
       updateStatus(newAccessory, devices.hb[zone]);
 
+      const createOutsideSensors = (this.sensors == "all" || this.sensors == "outside")
+
       // does user want outside sensors created? if so, only create 1 set
-      if ((this.sensors == "all" || this.sensors == "outside") && outsideSensors == 0) {
+      if (createOutsideSensors && !outsideSensorsCreated) {
         // Check for invalid humidity value
         if (devices.hb[zone].OutsideHumidity == 128) {
           debug("Invalid outside humidity value for", devices.hb[zone].Name + "(" + devices.hb[zone].ThermostatID + ")");
         } else {
           var newSensorsAccessory = new TccSensorsAccessory(this, devices.hb[zone], this.sensors);
           updateStatus(newSensorsAccessory, devices.hb[zone]);
-          outsideSensors = 1;
+          outsideSensorsCreated = true;
+        }
+      } else if (!createOutsideSensors) {
+        const outsideTempSensor = this.accessory.getService("Outside Temperature");
+
+        if (outsideTempSensor) {
+          this.accessory.removeService(outsideTempSensor);
+        }
+
+        const outsideHumiditySensor = this.accessory.getService("Outside Humidity");
+
+        if (outsideHumiditySensor) {
+          this.accessory.removeService(outsideHumiditySensor);
         }
       }
     }
