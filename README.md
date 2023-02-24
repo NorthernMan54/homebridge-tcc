@@ -60,6 +60,7 @@ To resolve the issue, please follow the steps here. https://github.com/nodejs/no
   * `none` - No sensors will be shown (this is default setting)
   * `all` - Enables all available temperature/humidity sensors
   * `inside` - Enables temperature and humidity sensors for each thermostat
+  * `insideHumidity` - Enables inside humidity sensors for each thermostat
   * `outside` - Enables a single set of outdoor temperature and humidity sensors
 * `debug` - Enables debug level logging from the plugin, defaults to `false`, to enable set to `true`
 
