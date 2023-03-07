@@ -6,7 +6,8 @@
   "keywords": [
     "homebridge-plugin",
     "tcc",
-    "honeywell"
+    "honeywell",
+    "thermostat"
   ],
   "repository": {
     "type": "git",
