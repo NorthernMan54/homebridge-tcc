@@ -2,7 +2,7 @@
   "pluginAlias": "tcc",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "<p align='center'><img width='250px' src='https://user-images.githubusercontent.com/3979615/71876008-d99d7400-3179-11ea-909b-9d2a3d1e670f.png'></p>\n\nThe **Homebridge TCC** plugin allows you to control your North American Honeywell Total Comformt Connect thermostats from HomeKit. ",
+  "headerDisplay": "<p align='center'><img width='250px' src='https://user-images.githubusercontent.com/3979615/71876008-d99d7400-3179-11ea-909b-9d2a3d1e670f.png'></p>\n\nThe **Homebridge TCC** plugin allows you to control your North American Honeywell Total Comformt Connect thermostats from HomeKit.",
   "footerDisplay": "",
   "schema": {
     "type": "object",
@@ -26,6 +26,41 @@
         "required": true,
         "description": "Your Honeywell password."
       },
+      "usePermanentHolds": {
+        "title": "Use Permanent Holds",
+        "type": "boolean",
+        "required": false,
+        "description": "If set to true, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to false, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off."
+      },
+      "sensors": {
+        "title": "Sensors",
+        "type": "string",
+        "description": "Create temperature and humidity HomeKit sensors that are useful for automations, defaults to none.",
+        "default": "none",
+        "required": true,
+        "oneOf": [
+          {
+            "title": "None (default)",
+            "enum": ["none"]
+          },
+          {
+            "title": "Indoor temperature and humidity",
+            "enum": ["inside"]
+          },
+          {
+            "title": "Indoor humidity",
+            "enum": ["insideHumidity"]
+          },
+          {
+            "title": "Outdoor temperature and humidity",
+            "enum": ["outside"]
+          },
+          {
+            "title": "All available",
+            "enum": ["all"]
+          }
+        ]
+      },
       "refresh": {
         "title": "Refresh Token",
         "default": 600,
@@ -37,11 +72,12 @@
       "storage": {
         "title": "Storage",
         "type": "string",
-        "required": false,
+        "required": true,
         "description": "Storage of chart graphing data for history graphing, either fs or googleDrive, defaults to fs.",
         "default": "fs",
-        "oneOf": [{
-            "title": "File System",
+        "oneOf": [
+          {
+            "title": "File System (default)",
             "enum": ["fs"]
           },
           {
@@ -49,12 +85,6 @@
             "enum": ["googleDrive"]
           }
         ]
-      },
-      "usePermanentHolds": {
-        "title": "usePermanentHolds",
-        "type": "boolean",
-        "required": false,
-        "description": "If set to true, temperature changes will be set as permanent holds, rather than temporary holds. This will allow you to use HomeKit automations to completely replace your thermostat's schedule. If set to false, the temperature changes will expire after a certain period of time and resume your normal schedule. By default, this is off."
       },
       "debug": {
         "title": "Debug Logging",
@@ -64,25 +94,18 @@
       }
     }
   },
-  "layout": [{
+  "layout": [
+    {
       "type": "fieldset",
       "title": "Thermostat",
-      "items": [
-        "username",
-        "password"
-      ]
+      "items": ["username", "password", "sensors", "usePermanentHolds"]
     },
     {
       "type": "fieldset",
       "title": "Optional Settings",
       "expandable": true,
       "expanded": false,
-      "items": [
-        "refresh",
-        "storage",
-        "usePermanentHolds",
-        "debug"
-      ]
+      "items": ["refresh", "storage", "debug"]
     }
   ]
 }
