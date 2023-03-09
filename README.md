@@ -77,3 +77,4 @@ To resolve the issue, please follow the steps here. https://github.com/nodejs/no
 - hakusaro - Added support for permanent temperature holds.
 - jcgorla-dev - Validation of Honeywell's Prestige IAQ Thermostat
 - kylerove - Added support for separate indoor and outdoor temperature / humidity sensors
+- johnjensenish - Enhanced support for separate indoor and outdoor temperature / humidity sensors
