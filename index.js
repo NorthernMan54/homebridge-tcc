@@ -10,7 +10,7 @@ const moment = require('moment');
 
 var myAccessories = [];
 var thermostats;
-var outsideSensors = 0;
+var outsideSensorsCreated = false;
 
 module.exports = function(homebridge) {
   Accessory = homebridge.platformAccessory;
@@ -54,18 +54,36 @@ tccPlatform.prototype.didFinishLaunching = function() {
     for (var zone in devices.hb) {
       debug("Creating accessory for", devices.hb[zone].Name + "(" + devices.hb[zone].ThermostatID + ")");
       //debug("tccPlatform.prototype.didFinishLaunching()",this.devices)
-      var newAccessory = new TccAccessory(this, devices.hb[zone], this.sensors);
-      updateStatus(newAccessory, devices.hb[zone]);
+      var thermostatAccessory = new TccAccessory(this, devices.hb[zone], this.sensors);
+      updateStatus(thermostatAccessory, devices.hb[zone]);
+
+      const createOutsideSensors = (this.sensors == "all" || this.sensors == "outside")
 
       // does user want outside sensors created? if so, only create 1 set
-      if ((this.sensors == "all" || this.sensors == "outside") && outsideSensors == 0) {
+      if (createOutsideSensors && !outsideSensorsCreated) {
         // Check for invalid humidity value
         if (devices.hb[zone].OutsideHumidity == 128) {
           debug("Invalid outside humidity value for", devices.hb[zone].Name + "(" + devices.hb[zone].ThermostatID + ")");
         } else {
-          var newSensorsAccessory = new TccSensorsAccessory(this, devices.hb[zone], this.sensors);
-          updateStatus(newSensorsAccessory, devices.hb[zone]);
-          outsideSensors = 1;
+          const outsideAccessory = new TccSensorsAccessory(this, devices.hb[zone], this.sensors);
+          updateStatus(outsideAccessory, devices.hb[zone]);
+          outsideSensorsCreated = true;
+        }
+      } else if (!createOutsideSensors) {
+        const outsideAccessory = getAccessoryByName("Outside Sensors");
+
+        if (outsideAccessory) {
+          const outsideTempSensor = outsideAccessory.getService("Outside Temperature");
+
+          if (outsideTempSensor) {
+            outsideAccessory.removeService(outsideTempSensor);
+          }
+
+          const outsideHumiditySensor = outsideAccessory.getService("Outside Humidity");
+
+          if (outsideHumiditySensor) {
+            outsideAccessory.removeService(outsideHumiditySensor);
+          }
         }
       }
     }
@@ -428,7 +446,7 @@ function TccAccessory(that, device, sensors) {
 function TccSensorsAccessory(that, device, sensors) {
   this.log = that.log;
   //this.log("Adding TCC Sensors Device");
-  this.name = "Outside Sensors"
+  this.name = "Outside Sensors";
   this.ThermostatID = device.ThermostatID;
   this.device = device;
   this.storage = that.storage;
@@ -479,7 +497,7 @@ function TccSensorsAccessory(that, device, sensors) {
     this.log("Existing TCC outside sensors accessory (deviceID=" + this.ThermostatID + ")", this.name);
 
     // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
-    this.accessory = getAccessoryByName("Outside Sensors");
+    this.accessory = getAccessoryByName(this.name);
     if (!this.accessory.getService("Outside Temperature")) {
       debug("TccSensorsAccessory() " + this.name + " OutsideTemperature = true, adding sensor");
       this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "Outside");
