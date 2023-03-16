@@ -61,14 +61,9 @@ tccPlatform.prototype.didFinishLaunching = function() {
 
       // does user want outside sensors created? if so, only create 1 set
       if (createOutsideSensors && !outsideSensorsCreated) {
-        // Check for invalid humidity value
-        if (devices.hb[zone].OutsideHumidity == 128) {
-          debug("Invalid outside humidity value for", devices.hb[zone].Name + "(" + devices.hb[zone].ThermostatID + ")");
-        } else {
-          const outsideAccessory = new TccSensorsAccessory(this, devices.hb[zone], this.sensors);
-          updateStatus(outsideAccessory, devices.hb[zone]);
-          outsideSensorsCreated = true;
-        }
+        const outsideAccessory = new TccSensorsAccessory(this, devices.hb[zone], this.sensors);
+        updateStatus(outsideAccessory, devices.hb[zone]);
+        outsideSensorsCreated = true;
       } else if (!createOutsideSensors) {
         const outsideAccessory = getAccessoryByName("Outside Sensors");
 
@@ -479,16 +474,21 @@ function TccSensorsAccessory(that, device, sensors) {
         maxValue: 100
       });
 
-    // create outside humidity sensor
-    debug("TccSensorsAccessory() " + this.name + " outsideHumidity = true, existing sensor");
-    this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
-    this.OutsideHumidityService
-      .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+    // Check for invalid humidity value
+    if (this.device.OutsideHumidity == 128) {
+      debug("Invalid outside humidity value for", this.device.Name + "(" + this.device.ThermostatID + ")");
+    } else {
+      // create outside humidity sensor
+      debug("TccSensorsAccessory() " + this.name + " outsideHumidity = true, existing sensor");
+      this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
+      this.OutsideHumidityService
+          .getCharacteristic(Characteristic.CurrentRelativeHumidity);
 
-    this.accessory.loggingService = new FakeGatoHistoryService("weather", this.accessory, {
-      storage: this.storage,
-      minutes: this.refresh * 10 / 60
-    });
+      this.accessory.loggingService = new FakeGatoHistoryService("weather", this.accessory, {
+        storage: this.storage,
+        minutes: this.refresh * 10 / 60
+      });
+    }
 
     that.api.registerPlatformAccessories("homebridge-tcc", "tcc", [this.accessory]);
     myAccessories.push(this.accessory);
@@ -509,12 +509,22 @@ function TccSensorsAccessory(that, device, sensors) {
           maxValue: 100
         });
     }
-    if (!this.accessory.getService("Outside Humidity")) {
-      debug("TccSensorsAccessory() " + this.name + " outsideHumidity = true, adding sensor");
-      this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
 
-      this.OutsideHumidityService
-        .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+    // Check for invalid humidity value
+    if (this.device.OutsideHumidity == 128) {
+      debug("Invalid outside humidity value for", this.device.Name + "(" + this.device.ThermostatID + ")");
+
+      if (this.accessory.getService("Outside Humidity")) {
+        this.accessory.removeService(this.accessory.getService("Outside Humidity"));
+      }
+    } else {
+      if (!this.accessory.getService("Outside Humidity")) {
+        debug("TccSensorsAccessory() " + this.name + " outsideHumidity = true, adding sensor");
+        this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
+
+        this.OutsideHumidityService
+            .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+      }
     }
     return this.accessory;
   }
