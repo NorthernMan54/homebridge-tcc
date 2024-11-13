@@ -26,6 +26,7 @@ build/Release
 # Misc
 
 node_modules
-package-lock.json
 therm.py
 lib/evohome.js
+/test/hbConfig/accessories
+/test/hbConfig/persist

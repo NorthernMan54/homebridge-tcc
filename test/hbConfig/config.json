@@ -1,0 +1,27 @@
+{
+  "bridge": {
+    "name": "Heisenberg",
+    "username": "AA:BB:CC:DD:EE:01",
+    "port": 51826,
+    "pin": "031-45-154"
+  },
+  "description": "HomeBridge HTTP Status Control",
+  "plugins": [
+    "homebridge-tcc",
+    "homebridge-config-ui-x"
+  ],
+  "platforms": [
+    {
+      "name": "Config",
+      "port": 8581,
+      "auth": "none",
+      "theme": "auto",
+      "tempUnits": "c",
+      "lang": "auto",
+      "sudo": false,
+      "platform": "config"
+    }
+  ],
+  "accessories": [
+  ]
+}

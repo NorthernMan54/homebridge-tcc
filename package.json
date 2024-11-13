@@ -1,6 +1,6 @@
 {
   "name": "homebridge-tcc",
-  "version": "0.2.34",
+  "version": "0.3.0",
   "description": "Honeywell Total Connect Comfort support for Homebridge: https://github.com/nfarina/homebridge",
   "license": "ISC",
   "keywords": [
@@ -9,6 +9,10 @@
     "honeywell",
     "thermostat"
   ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "nodemon"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NorthernMan54/homebridge-tcc.git"
@@ -17,16 +21,32 @@
     "url": "https://github.com/NorthernMan54/homebridge-tcc/issues"
   },
   "engines": {
-    "node": ">=0.12.0",
-    "homebridge": ">=0.4.16"
+    "homebridge": "^1.6.0",
+    "node": "^18.20.4 || ^20.15.1 || ^22.0.0"
   },
   "dependencies": {
-    "debug": "^2.6.9",
+    "debug": "^4.3.7",
     "easy-soap-request": ">=0.0.0",
-    "fakegato-history": "^0.5.6",
+    "fakegato-history": "^0.6.5",
     "moment": ">2.20.1",
     "p-queue": "^6.6.2",
     "request": "^2.88.2",
+    "semver": "^7.6.3",
     "xml2json": ">=0.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src"
+    ],
+    "ext": "ts",
+    "ignore": [],
+    "exec": "~/npm/bin/homebridge -U ./test/hbConfig -T -D -P .",
+    "signal": "SIGTERM",
+    "env": {
+      "NODE_OPTIONS": "--trace-warnings"
+    }
   }
 }
