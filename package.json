@@ -3,6 +3,7 @@
   "version": "0.3.0",
   "description": "Honeywell Total Connect Comfort support for Homebridge: https://github.com/nfarina/homebridge",
   "license": "ISC",
+  "main": "src/index.js",
   "keywords": [
     "homebridge-plugin",
     "tcc",
