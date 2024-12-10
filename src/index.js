@@ -2,31 +2,37 @@
 'use strict';
 
 var debug = require('debug')('tcc');
-var Accessory, Service, Characteristic, UUIDGen, FakeGatoHistoryService, CustomCharacteristic;
+var Accessory, Service, Characteristic, UUIDGen, FakeGatoHistoryService, CustomCharacteristics;
 var os = require("os");
 var hostname = os.hostname();
 var Tcc = require('./lib/tcc.js').tcc;
 const moment = require('moment');
+var homebridgeLib = require('homebridge-lib');
 
 var myAccessories = [];
 var thermostats;
 var outsideSensorsCreated = false;
 
-module.exports = function(homebridge) {
+const PLUGIN_NAME = "homebridge-tcc";
+const PLATFORM_NAME = "tcc";
+
+module.exports = function (homebridge) {
   Accessory = homebridge.platformAccessory;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   UUIDGen = homebridge.hap.uuid;
-  CustomCharacteristic = require('./lib/CustomCharacteristic.js')(homebridge);
+  CustomCharacteristics = new homebridgeLib.EveHomeKitTypes(homebridge).Characteristics;
+  console.log("CustomCharacteristics", CustomCharacteristics);
   FakeGatoHistoryService = require('fakegato-history')(homebridge);
 
   // tcc.setCharacteristic(Characteristic);
 
-  homebridge.registerPlatform("homebridge-tcc", "tcc", tccPlatform);
+  homebridge.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, tccPlatform);
 };
 
 class tccPlatform {
   constructor(log, config, api) {
+    this.api = api;
     this.username = config['username'];
     this.password = config['password'];
     this.refresh = config['refresh'] || 600; // Lower than 10 minutes triggers request rate limiter on Honeywell site.
@@ -41,12 +47,10 @@ class tccPlatform {
       debug.enabled = true;
     }
 
-    if (api) {
-      this.api = api;
-      this.api.on('didFinishLaunching', this.didFinishLaunching.bind(this));
-    }
+    api.on('didFinishLaunching', this.didFinishLaunching);
   }
-  didFinishLaunching() {
+
+  didFinishLaunching = () => {
     this.log("didFinishLaunching");
 
     thermostats = new Tcc(this);
@@ -84,10 +88,11 @@ class tccPlatform {
       }
     }).catch((err) => {
       this.log("Critical Error - No devices created, please restart.");
-      this.log(err.message);
+      this.log.error(err);
     });
     setInterval(pollDevices.bind(this), this.refresh * 1000); // Poll every minute
   }
+
   configureAccessory(accessory) {
     this.log("configureAccessory %s", accessory.displayName);
 
@@ -146,7 +151,7 @@ class tccPlatform {
 
 function pollDevices() {
   thermostats.pollThermostat().then((devices) => {
-    myAccessories.forEach(function(accessory) {
+    myAccessories.forEach(function (accessory) {
       debug("pollDevices - updateStatus", accessory.displayName);
       if (devices.hb[accessory.context.ThermostatID]) {
         updateStatus(accessory, devices.hb[accessory.context.ThermostatID]);
@@ -170,7 +175,7 @@ function pollDevices() {
     } else {
       this.log("ERROR: pollDevices", err);
     }
-    myAccessories.forEach(function(accessory) {
+    myAccessories.forEach(function (accessory) {
       if (accessory.getService(Service.Thermostat)) {
         accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.TargetTemperature)
           .updateValue(new Error("Status missing for thermostat"));
@@ -400,9 +405,7 @@ class TccAccessory {
       });
 
       this.accessory
-        .getService(Service.Thermostat).addCharacteristic(CustomCharacteristic.ValvePosition);
-      // this.accessory.getService(Service.Thermostat).addCharacteristic(CustomCharacteristic.ProgramCommand);
-      // this.accessory.getService(Service.Thermostat).addCharacteristic(CustomCharacteristic.ProgramData);
+        .getService(Service.Thermostat).addCharacteristic(CustomCharacteristics.ValvePosition);
       this.accessory.context.ChangeThermostat = new ChangeThermostat(this.accessory);
       that.api.registerPlatformAccessories("homebridge-tcc", "tcc", [this.accessory]);
       myAccessories.push(this.accessory);
@@ -590,7 +593,7 @@ function setCoolingThresholdTemperature(value, callback) {
 
 function getAccessoryByName(accessoryName) {
   var value;
-  myAccessories.forEach(function(accessory) {
+  myAccessories.forEach(function (accessory) {
     // debug("getAccessoryByName zone", accessory.name, name);
     if (accessory.context.name === accessoryName) {
       value = accessory;
@@ -601,7 +604,7 @@ function getAccessoryByName(accessoryName) {
 
 function getAccessoryByThermostatID(ThermostatID) {
   var value;
-  myAccessories.forEach(function(accessory) {
+  myAccessories.forEach(function (accessory) {
     // debug("getAccessoryByName zone", accessory.name, name);
     if (accessory.context.ThermostatID === ThermostatID) {
       value = accessory;
