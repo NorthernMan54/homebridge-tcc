@@ -31,3 +31,5 @@ lib/evohome.js
 /test/hbConfig/accessories
 /test/hbConfig/persist
 test/hbConfig/Pinkman_Wasaga_persist.json
+test/hbConfig/config.json
+test/hbConfig/config.json

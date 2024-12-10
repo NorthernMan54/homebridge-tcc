@@ -22,7 +22,6 @@ module.exports = function (homebridge) {
   Characteristic = homebridge.hap.Characteristic;
   UUIDGen = homebridge.hap.uuid;
   CustomCharacteristics = new homebridgeLib.EveHomeKitTypes(homebridge).Characteristics;
-  console.log("CustomCharacteristics", CustomCharacteristics);
   FakeGatoHistoryService = require('fakegato-history')(homebridge);
 
   // tcc.setCharacteristic(Characteristic);
