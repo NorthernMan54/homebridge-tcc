@@ -34,7 +34,6 @@
     "fakegato-history": "^0.6.5",
     "moment": ">2.20.1",
     "p-queue": "^6.6.2",
-    "request": "^2.88.2",
     "semver": "^7.6.3",
     "xml2json": ">=0.0.0",
     "homebridge-lib": "^6.0.1"

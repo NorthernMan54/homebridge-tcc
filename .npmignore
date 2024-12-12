@@ -5,3 +5,4 @@ beta.sh
 test/
 eslint.config.mjs
 .github/
+test/

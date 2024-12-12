@@ -2,12 +2,15 @@
 'use strict';
 
 var debug = require('debug')('tcc');
+const moment = require('moment');
+var homebridgeLib = require('homebridge-lib');
+
 var Accessory, Service, Characteristic, UUIDGen, FakeGatoHistoryService, CustomCharacteristics;
 var os = require("os");
 var hostname = os.hostname();
 var Tcc = require('./lib/tcc.js').tcc;
-const moment = require('moment');
-var homebridgeLib = require('homebridge-lib');
+
+
 
 var myAccessories = [];
 var thermostats;
@@ -23,9 +26,6 @@ module.exports = function (homebridge) {
   UUIDGen = homebridge.hap.uuid;
   CustomCharacteristics = new homebridgeLib.EveHomeKitTypes(homebridge).Characteristics;
   FakeGatoHistoryService = require('fakegato-history')(homebridge);
-
-  // tcc.setCharacteristic(Characteristic);
-
   homebridge.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, tccPlatform);
 };
 
