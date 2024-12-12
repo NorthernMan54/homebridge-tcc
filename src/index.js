@@ -5,6 +5,8 @@ var debug = require('debug')('tcc');
 const moment = require('moment');
 var homebridgeLib = require('homebridge-lib');
 
+const FirmwareRevision = require('../package.json').version
+
 var Accessory, Service, Characteristic, UUIDGen, FakeGatoHistoryService, CustomCharacteristics;
 var os = require("os");
 var hostname = os.hostname();
@@ -322,7 +324,7 @@ class TccAccessory {
         .setCharacteristic(Characteristic.Manufacturer, "TCC")
         .setCharacteristic(Characteristic.Model, device.Model)
         .setCharacteristic(Characteristic.SerialNumber, hostname + "-" + this.name)
-        .setCharacteristic(Characteristic.FirmwareRevision, require('../package.json').version);
+        .setCharacteristic(Characteristic.FirmwareRevision, FirmwareRevision);
 
       this.accessory.addService(Service.Thermostat, this.name);
 
@@ -466,7 +468,7 @@ class TccSensorsAccessory {
         .setCharacteristic(Characteristic.Manufacturer, "TCC")
         .setCharacteristic(Characteristic.Model, device.Model)
         .setCharacteristic(Characteristic.SerialNumber, hostname + "-" + this.name)
-        .setCharacteristic(Characteristic.FirmwareRevision, require('./package.json').version);
+        .setCharacteristic(Characteristic.FirmwareRevision, FirmwareRevision);
 
       // create outside temp sensor
       debug("TccSensorsAccessory() " + this.name + " outsideTemperature = true, existing sensor");
