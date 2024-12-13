@@ -15,7 +15,7 @@ queue.on('active', () => {
 });
 // var thermostats = {};
 
-const URL = 'https://tccna.honeywell.com/ws/MobileV2.asmx';
+const URL = 'https://TCCNA.resideo.com/ws/MobileV2.asmx';
 
 var HEADER = {
   'user-agent': 'TCCStageC/1092 CFNetwork/1125.2 Darwin/19.4.0',

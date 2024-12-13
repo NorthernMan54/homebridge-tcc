@@ -26,6 +26,12 @@ build/Release
 # Misc
 
 node_modules
-package-lock.json
 therm.py
 lib/evohome.js
+/test/hbConfig/accessories
+/test/hbConfig/persist
+test/hbConfig/Pinkman_Wasaga_persist.json
+test/hbConfig/config.json
+test/hbConfig/config.json
+test/hbConfig/Bart_Bonacres_persist.json
+test/hbConfig/Bart_Wasaga_persist.json

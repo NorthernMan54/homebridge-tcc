@@ -2,3 +2,7 @@ test.js
 CelciusToFahrenheit.js
 publish.sh
 beta.sh
+test/
+eslint.config.mjs
+.github/
+test/
