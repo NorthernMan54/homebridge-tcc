@@ -15,33 +15,24 @@ module.exports = {
 function soapMessage(body) {
   return ({
     "soap:Envelope": {
-      "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-      "xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-      "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/",
-      "xmlns": "http://services.alarmnet.com/Services/MobileV2/",
+      "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+      "@xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
+      "@xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/",
+      "@xmlns": "http://services.alarmnet.com/Services/MobileV2/",
       "soap:Body": body
+      }
     }
-  });
+  );
 }
 
 function AuthenticateUserLoginMessage(username, password) {
   return ({
     AuthenticateUserLogin: {
-      username: {
-        $t: username
-      },
-      password: {
-        $t: password
-      },
-      applicationID: {
-        $t: "357568d9-38ff-4fda-bfe2-46b0fa1dd864"
-      },
-      applicationVersion: {
-        $t: "2"
-      },
-      uiLanguage: {
-        $t: "Default"
-      }
+      username: username,
+      password: password,
+      applicationID: "357568d9-38ff-4fda-bfe2-46b0fa1dd864",
+      applicationVersion: "2",
+      uiLanguage: "Default"
     }
   });
 }
@@ -49,9 +40,7 @@ function AuthenticateUserLoginMessage(username, password) {
 function GetLocationsMessage(sessionID) {
   return ({
     GetLocations: {
-      sessionID: {
-        $t: sessionID
-      }
+      sessionID: sessionID
     }
   });
 }
@@ -65,54 +54,22 @@ function ChangeThermostatMessage(sessionID, desiredState, thermostat, usePermane
   // debug("ChangeThermostatMessage", desiredState);
   return ({
     ChangeThermostatUI: {
-      sessionID: {
-        $t: sessionID
-      },
-      thermostatID: {
-        $t: desiredState.ThermostatID
-      },
-      changeSystemSwitch: {
-        $t: 1
-      },
-      systemSwitch: {
-        $t: systemSwitch(desiredState, thermostat)
-      },
-      changeHeatSetpoint: {
-        $t: 1
-      },
-      heatSetpoint: {
-        $t: heatSetpoint(desiredState, thermostat)
-      },
-      changeCoolSetpoint: {
-        $t: 1
-      },
-      coolSetpoint: {
-        $t: coolSetpoint(desiredState, thermostat)
-      },
-      changeHeatNextPeriod: {
-        $t: 1
-      },
-      heatNextPeriod: {
-        $t: thermostat.device.UI.HeatNextPeriod
-      },
-      changeCoolNextPeriod: {
-        $t: 1
-      },
-      coolNextPeriod: {
-        $t: thermostat.device.UI.CoolNextPeriod
-      },
-      changeStatusHeat: {
-        $t: 1
-      },
-      statusHeat: {
-        $t: (usePermanentHolds ? 2 : 1)
-      },
-      changeStatusCool: {
-        $t: 1
-      },
-      statusCool: {
-        $t: (usePermanentHolds ? 2 : 1)
-      }
+      sessionID: sessionID,
+      thermostatID: desiredState.ThermostatID,
+      changeSystemSwitch: 1,
+      systemSwitch: systemSwitch(desiredState, thermostat),
+      changeHeatSetpoint: 1,
+      heatSetpoint: heatSetpoint(desiredState, thermostat),
+      changeCoolSetpoint: 1,
+      coolSetpoint: coolSetpoint(desiredState, thermostat),
+      changeHeatNextPeriod: 1,
+      heatNextPeriod: thermostat.device.UI.HeatNextPeriod,
+      changeCoolNextPeriod: 1,
+      coolNextPeriod: thermostat.device.UI.CoolNextPeriod,
+      changeStatusHeat: 1,
+      statusHeat: (usePermanentHolds ? 2 : 1),
+      changeStatusCool: 1,
+      statusCool: (usePermanentHolds ? 2 : 1)
     }
   });
 }
@@ -120,12 +77,8 @@ function ChangeThermostatMessage(sessionID, desiredState, thermostat, usePermane
 function GetCommTaskStateMessage(sessionID, commTaskID) {
   return ({
     GetCommTaskState: {
-      sessionID: {
-        $t: sessionID
-      },
-      commTaskID: {
-        $t: commTaskID
-      }
+      sessionID: sessionID,
+      commTaskID: commTaskID
     }
   });
 }
@@ -133,12 +86,8 @@ function GetCommTaskStateMessage(sessionID, commTaskID) {
 function GetThermostatMessage(sessionID, ThermostatID) {
   return ({
     GetThermostat: {
-      sessionID: {
-        $t: sessionID
-      },
-      thermostatID: {
-        $t: ThermostatID
-      }
+      sessionID: sessionID,
+      thermostatID: ThermostatID
     }
   });
 }
