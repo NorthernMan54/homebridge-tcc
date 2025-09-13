@@ -1,7 +1,25 @@
 const soapRequest = require('easy-soap-request');
-const parser = require('xml2json');
+const { XMLParser, XMLBuilder } = require('fast-xml-parser');
 var tccMessage = require('./tccMessage.js');
 var debug = require('debug')('tcc-lib');
+
+// Configure XML parser and builder
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "@",
+  parseAttributeValue: true,
+  parseTagValue: true,
+  trimValues: true,
+  parseTrueNumberOnly: true,
+  arrayMode: false
+});
+
+const xmlBuilder = new XMLBuilder({
+  ignoreAttributes: false,
+  attributeNamePrefix: "@",
+  suppressEmptyNode: true,
+  format: false
+});
 const {
   default: PQueue
 } = require('p-queue');
@@ -103,7 +121,7 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
           this.sessionID = await this._login();
         }
         HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/ChangeThermostatUI';
-        var message = '<?xml version="1.0" encoding="utf-8"?>' + parser.toXml(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds)));
+        var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds)));
         debug("_UpdateThermostat: SOAP Message", message, this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds);
         var {
           response
@@ -115,15 +133,7 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
           withCredentials: true
         });
         if (response.statusCode === 200) {
-          var ChangeThermostat = parser.toJson(response.body, {
-            object: true,
-            reversible: false,
-            coerce: true,
-            sanitize: false,
-            trim: true,
-            arrayNotation: false,
-            alternateTextNode: false
-          })["soap:Envelope"]["soap:Body"].ChangeThermostatUIResponse.ChangeThermostatUIResult;
+          var ChangeThermostat = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].ChangeThermostatUIResponse.ChangeThermostatUIResult;
           // debug("_UpdateThermostat", ChangeThermostat);
           if (ChangeThermostat.Result === "Success") {
             debug("Success: _UpdateThermostat %s", ChangeThermostat, message);
@@ -149,7 +159,7 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
         }
       } catch (err) {
         // console.error("_UpdateThermostat Error:", err);
-        debug("_UpdateThermostat message", parser.toXml(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds))));
+        debug("_UpdateThermostat message", xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds))));
         reject(err);
         this.sessionID = null;
       }
@@ -164,9 +174,7 @@ tcc.prototype._login = function() {
     (async () => {
       try {
         HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/AuthenticateUserLogin';
-        var message = '<?xml version="1.0" encoding="utf-8"?>' + parser.toXml(tccMessage.soapMessage(tccMessage.AuthenticateUserLoginMessage(this._username, this._password)), {
-          sanitize: true
-        });
+        var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.AuthenticateUserLoginMessage(this._username, this._password)));
         var {
           response
         } = await soapRequest({
@@ -177,15 +185,7 @@ tcc.prototype._login = function() {
           withCredentials: true
         });
         if (response.statusCode === 200) {
-          var AuthenticateUserLoginResponse = parser.toJson(response.body, {
-            object: true,
-            reversible: false,
-            coerce: true,
-            sanitize: false,
-            trim: true,
-            arrayNotation: false,
-            alternateTextNode: false
-          })["soap:Envelope"]["soap:Body"].AuthenticateUserLoginResponse;
+          var AuthenticateUserLoginResponse = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].AuthenticateUserLoginResponse;
           if (AuthenticateUserLoginResponse.AuthenticateUserLoginResult.Result === "Success") {
             resolve(AuthenticateUserLoginResponse.AuthenticateUserLoginResult.SessionID);
           } else {
@@ -212,7 +212,7 @@ tcc.prototype._GetCommTaskState = function(CommTaskID) {
     (async () => {
       try {
         HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetCommTaskState';
-        var message = '<?xml version="1.0" encoding="utf-8"?>' + parser.toXml(tccMessage.soapMessage(tccMessage.GetCommTaskStateMessage(this.sessionID, CommTaskID)));
+        var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetCommTaskStateMessage(this.sessionID, CommTaskID)));
         // debug("_GetCommTaskState", message);
         var {
           response
@@ -225,15 +225,7 @@ tcc.prototype._GetCommTaskState = function(CommTaskID) {
         });
         // debug("_GetCommTaskState", response.statusCode, response.body);
         if (response.statusCode === 200) {
-          var GetCommTaskStateResponse = parser.toJson(response.body, {
-            object: true,
-            reversible: false,
-            coerce: true,
-            sanitize: false,
-            trim: true,
-            arrayNotation: false,
-            alternateTextNode: false
-          })["soap:Envelope"]["soap:Body"].GetCommTaskStateResponse;
+          var GetCommTaskStateResponse = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].GetCommTaskStateResponse;
           if (GetCommTaskStateResponse.GetCommTaskStateResult.Result === "Success") {
             debug("GetCommTaskState Success %s", GetCommTaskStateResponse.GetCommTaskStateResult);
             resolve();
@@ -261,7 +253,7 @@ tcc.prototype._GetThermostat = function(ThermostatID) {
     (async () => {
       try {
         HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetThermostat';
-        var message = '<?xml version="1.0" encoding="utf-8"?>' + parser.toXml(tccMessage.soapMessage(tccMessage.GetThermostatMessage(this.sessionID, ThermostatID)));
+        var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetThermostatMessage(this.sessionID, ThermostatID)));
         // debug("_GetThermostat", message);
         var {
           response
@@ -274,15 +266,7 @@ tcc.prototype._GetThermostat = function(ThermostatID) {
         });
         // debug("_GetThermostat", response.statusCode, response.body);
         if (response.statusCode === 200) {
-          var GetThermostatResult = parser.toJson(response.body, {
-            object: true,
-            reversible: false,
-            coerce: true,
-            sanitize: false,
-            trim: true,
-            arrayNotation: false,
-            alternateTextNode: false
-          })["soap:Envelope"]["soap:Body"].GetThermostatResponse.GetThermostatResult;
+          var GetThermostatResult = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].GetThermostatResponse.GetThermostatResult;
           // debug("GetThermostatResult", GetThermostatResult);
           if (GetThermostatResult.Result === "Success") {
             // debug("_GetThermostat - delta", JSON.stringify(diff(GetThermostatResult.Thermostat, this.thermostats.hb[ThermostatID.toString()]), null, 2));
@@ -315,7 +299,7 @@ tcc.prototype._GetLocationListData = function(withRetry) {
           this.sessionID = await this._login();
         }
         HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetLocations';
-        var message = '<?xml version="1.0" encoding="utf-8"?>' + parser.toXml(tccMessage.soapMessage(tccMessage.GetLocationsMessage(this.sessionID)));
+        var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetLocationsMessage(this.sessionID)));
         // debug("SOAP Message", parser.toXml(soapMessage(GetLocations)));
         var {
           response
@@ -327,15 +311,7 @@ tcc.prototype._GetLocationListData = function(withRetry) {
           withCredentials: true
         });
         if (response.statusCode === 200) {
-          var GetLocationsResult = parser.toJson(response.body, {
-            object: true,
-            reversible: false,
-            coerce: true,
-            sanitize: false,
-            trim: true,
-            arrayNotation: false,
-            alternateTextNode: false
-          })["soap:Envelope"]["soap:Body"].GetLocationsResponse.GetLocationsResult;
+          var GetLocationsResult = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].GetLocationsResponse.GetLocationsResult;
 
           if (GetLocationsResult.Result === "Success" && GetLocationsResult.Locations.LocationInfo) {
             // this.sessionID = AuthenticateUserLoginResponse.AuthenticateUserLoginResult.SessionID;
