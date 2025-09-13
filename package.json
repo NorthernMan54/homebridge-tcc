@@ -26,11 +26,11 @@
   },
   "engines": {
     "homebridge": "^1.6.0 || ^2.0.0-beta.0",
-    "node": "^18.20.4 || ^20.15.1 || ^22.0.0"
+    "node": ">=20.x"
   },
   "dependencies": {
     "debug": "^4.3.7",
-    "easy-soap-request": ">=0.0.0",
+    "easy-soap-request": "^5.7.0",
     "fakegato-history": "^0.6.5",
     "moment": ">2.20.1",
     "p-queue": "^6.6.2",
