@@ -29,14 +29,14 @@
     "node": ">=20.x"
   },
   "dependencies": {
-    "debug": "^4.3.7",
+    "debug": "^4.4.3",
     "easy-soap-request": "^5.7.0",
-    "fakegato-history": "^0.6.5",
+    "fakegato-history": "^0.6.7",
     "moment": ">2.20.1",
     "p-queue": "^6.6.2",
     "semver": "^7.6.3",
     "fast-xml-parser": "^5.2.5",
-    "homebridge-lib": "^6.0.1"
+    "homebridge-lib": "^7.1.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.14.0",
