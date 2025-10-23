@@ -18,6 +18,7 @@ const xmlParser = new XMLParser({
 const xmlBuilder = new XMLBuilder({
   ignoreAttributes: false,
   attributeNamePrefix: '',
+  textNodeName: '$t',
   format: false,
   suppressEmptyNode: true
 });
