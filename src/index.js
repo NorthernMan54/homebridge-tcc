@@ -71,8 +71,23 @@ class TccPlatform {
       changeThermostat = new ChangeThermostat(accessory, this.thermostats, this);
       this.changeThermostatMap.set(accessory, changeThermostat);
       debug("Created new ChangeThermostat instance for", accessory.displayName);
+    } else if (changeThermostat.requiresThermostatBinding(this.thermostats)) {
+      changeThermostat.setThermostatsInstance(this.thermostats);
+      debug("Updated ChangeThermostat binding for", accessory.displayName);
     }
     return changeThermostat;
+  }
+
+  roundTemperature(value, step = 0.5) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return value;
+    }
+    if (!step || step <= 0) {
+      return value;
+    }
+    const rounded = Math.round(value / step) * step;
+    const precision = step < 1 ? 1 : 0;
+    return parseFloat(rounded.toFixed(precision));
   }
 
   scheduleVerificationPoll(delay = 30000) {
@@ -95,6 +110,13 @@ class TccPlatform {
     this.log("didFinishLaunching");
 
     this.thermostats = new Tcc(this);
+    // Ensure cached ChangeThermostat instances pick up the new service
+    this.myAccessories.forEach((accessory) => {
+      const changeThermostat = this.changeThermostatMap.get(accessory);
+      if (changeThermostat) {
+        changeThermostat.setThermostatsInstance(this.thermostats);
+      }
+    });
     this.thermostats.pollThermostat().then((devices) => {
       if (!devices || !devices.hb) {
         this.log.error("Invalid device data received from TCC");
@@ -197,7 +219,7 @@ class TccPlatform {
   }
 
   pollDevices() {
-    this.thermostats.pollThermostat().then((devices) => {
+    return this.thermostats.pollThermostat().then((devices) => {
       this.myAccessories.forEach((accessory) => {
         debug("pollDevices - updateStatus", accessory.displayName);
         if (devices.hb[accessory.context.ThermostatID]) {
@@ -225,6 +247,7 @@ class TccPlatform {
             .updateValue(new Error("Status missing for thermostat"));
         }
       });
+      throw err;
     });
   }
 
@@ -232,6 +255,9 @@ class TccPlatform {
     if (!device) {
       this.log.error("updateStatus called with null device for accessory:", accessory.displayName);
       return;
+    }
+    if (device.device && device.device.UI && device.device.UI.DisplayedUnits) {
+      accessory.context.temperatureStep = device.device.UI.DisplayedUnits === "C" ? 0.5 : 1;
     }
     accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Name)
       .updateValue(device.Name);
@@ -323,8 +349,9 @@ class TccAccessory {
     this.device = device;
     this.usePermanentHolds = platform.usePermanentHolds;
     this.storage = platform.storage;
-    this.refresh = platform.refresh;
-    const uuid = UUIDGen.generate(this.name + " - TCC");
+   this.refresh = platform.refresh;
+   const uuid = UUIDGen.generate(this.name + " - TCC");
+    const temperatureStep = (device && device.device && device.device.UI && device.device.UI.DisplayedUnits === "C") ? 0.5 : 1;
     let createInsideHumiditySensors = false;
     let createInsideTemperatureSensors = false;
 
@@ -365,6 +392,7 @@ class TccAccessory {
       this.accessory.context.ThermostatID = device.ThermostatID;
       this.accessory.context.name = this.name;
       this.accessory.context.logEventCounter = 9; // Update fakegato on startup
+      this.accessory.context.temperatureStep = temperatureStep;
 
       this.accessory.getService(Service.AccessoryInformation)
         .setCharacteristic(Characteristic.Manufacturer, "TCC")
@@ -417,7 +445,8 @@ class TccAccessory {
         .getCharacteristic(Characteristic.TargetTemperature)
         .setProps({
           minValue: parseFloat(device.TargetTemperatureHeatMinValue),
-          maxValue: parseFloat(device.TargetTemperatureCoolMaxValue)
+          maxValue: parseFloat(device.TargetTemperatureCoolMaxValue),
+          minStep: temperatureStep
         })
         .on('set', setTargetTemperature.bind(this.accessory));
 
@@ -428,7 +457,8 @@ class TccAccessory {
           .getCharacteristic(Characteristic.CoolingThresholdTemperature)
           .setProps({
             minValue: parseFloat(device.TargetTemperatureCoolMinValue),
-            maxValue: parseFloat(device.TargetTemperatureCoolMaxValue)
+            maxValue: parseFloat(device.TargetTemperatureCoolMaxValue),
+            minStep: temperatureStep
           })
           .on('set', setCoolingThresholdTemperature.bind(this.accessory));
 
@@ -438,7 +468,8 @@ class TccAccessory {
           .getCharacteristic(Characteristic.HeatingThresholdTemperature)
           .setProps({
             minValue: parseFloat(device.TargetTemperatureHeatMinValue),
-            maxValue: parseFloat(device.TargetTemperatureHeatMaxValue)
+            maxValue: parseFloat(device.TargetTemperatureHeatMaxValue),
+            minStep: temperatureStep
           })
           .on('set', setHeatingThresholdTemperature.bind(this.accessory));
       }
@@ -462,8 +493,33 @@ class TccAccessory {
       this.log("Existing TCC accessory (deviceID=" + this.ThermostatID + ")", this.name);
       // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
       this.accessory = platform.getAccessoryByName(this.name);
+      this.accessory.context.temperatureStep = temperatureStep;
       debug("Heating Threshold", this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.HeatingThresholdTemperature).props);
       debug("Cooling Threshold", this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.CoolingThresholdTemperature).props);
+      const thermostatService = this.accessory.getService(Service.Thermostat);
+      thermostatService.getCharacteristic(Characteristic.TargetTemperature).setProps({
+        minValue: parseFloat(device.TargetTemperatureHeatMinValue),
+        maxValue: parseFloat(device.TargetTemperatureCoolMaxValue),
+        minStep: temperatureStep
+      });
+      if (device.device.UI.CanSetSwitchAuto) {
+        const coolingChar = thermostatService.getCharacteristic(Characteristic.CoolingThresholdTemperature);
+        if (coolingChar) {
+          coolingChar.setProps({
+            minValue: parseFloat(device.TargetTemperatureCoolMinValue),
+            maxValue: parseFloat(device.TargetTemperatureCoolMaxValue),
+            minStep: temperatureStep
+          });
+        }
+        const heatingChar = thermostatService.getCharacteristic(Characteristic.HeatingThresholdTemperature);
+        if (heatingChar) {
+          heatingChar.setProps({
+            minValue: parseFloat(device.TargetTemperatureHeatMinValue),
+            maxValue: parseFloat(device.TargetTemperatureHeatMaxValue),
+            minStep: temperatureStep
+          });
+        }
+      }
       if (createInsideTemperatureSensors && !this.accessory.getService(this.name + " Temperature")) {
         debug("TccAccessory() " + this.name + " InsideTemperature = true, adding sensor");
         this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
@@ -583,11 +639,23 @@ class TccSensorsAccessory {
 }
 
 function setTargetTemperature(value, callback) {
-  this.log("Setting target temperature for", this.displayName, "to", value + "°");
+  const service = this.getService(Service.Thermostat);
+  const characteristic = service.getCharacteristic(Characteristic.TargetTemperature);
+  const step = this.context.temperatureStep || characteristic.props.minStep || 0.5;
+  const roundedValue = this.platform.roundTemperature(value, step);
+  const minValue = typeof characteristic.props.minValue === 'number' ? characteristic.props.minValue : roundedValue;
+  const maxValue = typeof characteristic.props.maxValue === 'number' ? characteristic.props.maxValue : roundedValue;
+  const clampedValue = Math.min(maxValue, Math.max(minValue, roundedValue));
+  if (Math.abs(clampedValue - value) > (step / 10)) {
+    this.log("Adjusted target temperature for", this.displayName, "from", value + "°", "to", clampedValue + "°");
+  } else {
+    this.log("Setting target temperature for", this.displayName, "to", clampedValue + "°");
+  }
+  characteristic.updateValue(clampedValue);
   this.context.logEventCounter = 9;
   const changeThermostat = this.platform.getChangeThermostat(this);
   changeThermostat.put({
-    TargetTemperature: value
+    TargetTemperature: clampedValue
   }).then(() => {
     callback(null);
   }).catch((error) => {
@@ -609,10 +677,22 @@ function setTargetHeatingCooling(value, callback) {
 }
 
 function setHeatingThresholdTemperature(value, callback) {
-  this.log("Setting HeatingThresholdTemperature for", this.displayName, "to", value);
+  const service = this.getService(Service.Thermostat);
+  const characteristic = service.getCharacteristic(Characteristic.HeatingThresholdTemperature);
+  const step = this.context.temperatureStep || characteristic.props.minStep || 0.5;
+  const roundedValue = this.platform.roundTemperature(value, step);
+  const minValue = typeof characteristic.props.minValue === 'number' ? characteristic.props.minValue : roundedValue;
+  const maxValue = typeof characteristic.props.maxValue === 'number' ? characteristic.props.maxValue : roundedValue;
+  const clampedValue = Math.min(maxValue, Math.max(minValue, roundedValue));
+  if (Math.abs(clampedValue - value) > (step / 10)) {
+    this.log("Adjusted HeatingThresholdTemperature for", this.displayName, "from", value, "to", clampedValue);
+  } else {
+    this.log("Setting HeatingThresholdTemperature for", this.displayName, "to", clampedValue);
+  }
+  characteristic.updateValue(clampedValue);
   const changeThermostat = this.platform.getChangeThermostat(this);
   changeThermostat.put({
-    HeatingThresholdTemperature: value
+    HeatingThresholdTemperature: clampedValue
   }).then(() => {
     callback(null);
   }).catch((error) => {
@@ -621,10 +701,22 @@ function setHeatingThresholdTemperature(value, callback) {
 }
 
 function setCoolingThresholdTemperature(value, callback) {
-  this.log("Setting CoolingThresholdTemperature for", this.displayName, "to", value);
+  const service = this.getService(Service.Thermostat);
+  const characteristic = service.getCharacteristic(Characteristic.CoolingThresholdTemperature);
+  const step = this.context.temperatureStep || characteristic.props.minStep || 0.5;
+  const roundedValue = this.platform.roundTemperature(value, step);
+  const minValue = typeof characteristic.props.minValue === 'number' ? characteristic.props.minValue : roundedValue;
+  const maxValue = typeof characteristic.props.maxValue === 'number' ? characteristic.props.maxValue : roundedValue;
+  const clampedValue = Math.min(maxValue, Math.max(minValue, roundedValue));
+  if (Math.abs(clampedValue - value) > (step / 10)) {
+    this.log("Adjusted CoolingThresholdTemperature for", this.displayName, "from", value, "to", clampedValue);
+  } else {
+    this.log("Setting CoolingThresholdTemperature for", this.displayName, "to", clampedValue);
+  }
+  characteristic.updateValue(clampedValue);
   const changeThermostat = this.platform.getChangeThermostat(this);
   changeThermostat.put({
-    CoolingThresholdTemperature: value
+    CoolingThresholdTemperature: clampedValue
   }).then(() => {
     callback(null);
   }).catch((error) => {
@@ -642,6 +734,14 @@ class ChangeThermostat {
     this.thermostats = thermostatsInstance;
     this.platform = platform;
     this.accessory = accessory;
+  }
+
+  setThermostatsInstance(thermostatsInstance) {
+    this.thermostats = thermostatsInstance;
+  }
+
+  requiresThermostatBinding(thermostatsInstance) {
+    return thermostatsInstance && this.thermostats !== thermostatsInstance;
   }
 
   put(state) {
@@ -703,5 +803,3 @@ class ChangeThermostat {
     });
   }
 }
-
-
