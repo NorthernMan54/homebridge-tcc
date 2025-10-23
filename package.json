@@ -1,7 +1,7 @@
 {
   "name": "homebridge-tcc",
   "version": "0.3.1-beta.0",
-  "description": "Honeywell Total Connect Comfort support for Homebridge: https://github.com/nfarina/homebridge",
+  "description": "Honeywell Total Connect Comfort support for Homebridge: https://github.com/thindiyeh/homebridge-tcc",
   "license": "ISC",
   "main": "src/index.js",
   "keywords": [
@@ -19,10 +19,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NorthernMan54/homebridge-tcc.git"
+    "url": "git+https://github.com/thindiyeh/homebridge-tcc.git"
   },
   "bugs": {
-    "url": "https://github.com/NorthernMan54/homebridge-tcc/issues"
+    "url": "https://github.com/thindiyeh/homebridge-tcc/issues"
   },
   "engines": {
     "homebridge": "^1.6.0 || ^2.0.0-beta.0",
@@ -30,12 +30,12 @@
   },
   "dependencies": {
     "debug": "^4.3.7",
-    "easy-soap-request": ">=0.0.0",
+    "easy-soap-request": "^5.7.0",
     "fakegato-history": "^0.6.5",
-    "moment": ">2.20.1",
+    "fast-xml-parser": "^4.5.0",
+    "moment": "^2.30.1",
     "p-queue": "^6.6.2",
     "semver": "^7.6.3",
-    "xml2json": ">=0.0.0",
     "homebridge-lib": "^6.0.1"
   },
   "devDependencies": {
