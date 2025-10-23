@@ -90,6 +90,36 @@ class TccPlatform {
     return parseFloat(rounded.toFixed(precision));
   }
 
+  getTemperatureStepForDevice(device) {
+    if (!device || !device.device || !device.device.UI) {
+      return 0.5;
+    }
+    return (device.device.UI.DisplayedUnits === "C") ? 0.5 : 0.1;
+  }
+
+  normalizeCharacteristicValue(accessory, characteristic, rawValue) {
+    if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) {
+      return rawValue;
+    }
+    const units = accessory.context.displayedUnits || 'C';
+    let normalized;
+
+    if (units === 'F') {
+      const fahrenheitValue = (rawValue * 9 / 5) + 32;
+      const roundedFahrenheit = Math.round(fahrenheitValue);
+      normalized = parseFloat(((roundedFahrenheit - 32) * 5 / 9).toFixed(1));
+    } else {
+      const step = accessory.context.temperatureStep || characteristic.props.minStep || 0.5;
+      normalized = this.roundTemperature(rawValue, step);
+    }
+
+    const minValue = typeof characteristic.props.minValue === 'number' ? characteristic.props.minValue : normalized;
+    const maxValue = typeof characteristic.props.maxValue === 'number' ? characteristic.props.maxValue : normalized;
+    const clamped = Math.min(maxValue, Math.max(minValue, normalized));
+    const precision = (units === 'F' || (characteristic.props.minStep && characteristic.props.minStep < 1)) ? 1 : 0;
+    return parseFloat(clamped.toFixed(precision));
+  }
+
   scheduleVerificationPoll(delay = 30000) {
     // Clear any existing verification poll
     if (this.verificationPollTimeout) {
@@ -257,7 +287,8 @@ class TccPlatform {
       return;
     }
     if (device.device && device.device.UI && device.device.UI.DisplayedUnits) {
-      accessory.context.temperatureStep = device.device.UI.DisplayedUnits === "C" ? 0.5 : 1;
+      accessory.context.displayedUnits = device.device.UI.DisplayedUnits;
+      accessory.context.temperatureStep = this.getTemperatureStepForDevice(device);
     }
     accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Name)
       .updateValue(device.Name);
@@ -350,8 +381,9 @@ class TccAccessory {
     this.usePermanentHolds = platform.usePermanentHolds;
     this.storage = platform.storage;
    this.refresh = platform.refresh;
-   const uuid = UUIDGen.generate(this.name + " - TCC");
-    const temperatureStep = (device && device.device && device.device.UI && device.device.UI.DisplayedUnits === "C") ? 0.5 : 1;
+    const uuid = UUIDGen.generate(this.name + " - TCC");
+    const displayedUnits = (device && device.device && device.device.UI && device.device.UI.DisplayedUnits) || "C";
+    const temperatureStep = platform.getTemperatureStepForDevice(device);
     let createInsideHumiditySensors = false;
     let createInsideTemperatureSensors = false;
 
@@ -393,6 +425,7 @@ class TccAccessory {
       this.accessory.context.name = this.name;
       this.accessory.context.logEventCounter = 9; // Update fakegato on startup
       this.accessory.context.temperatureStep = temperatureStep;
+      this.accessory.context.displayedUnits = displayedUnits;
 
       this.accessory.getService(Service.AccessoryInformation)
         .setCharacteristic(Characteristic.Manufacturer, "TCC")
@@ -494,6 +527,7 @@ class TccAccessory {
       // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
       this.accessory = platform.getAccessoryByName(this.name);
       this.accessory.context.temperatureStep = temperatureStep;
+      this.accessory.context.displayedUnits = displayedUnits;
       debug("Heating Threshold", this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.HeatingThresholdTemperature).props);
       debug("Cooling Threshold", this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.CoolingThresholdTemperature).props);
       const thermostatService = this.accessory.getService(Service.Thermostat);
@@ -641,21 +675,17 @@ class TccSensorsAccessory {
 function setTargetTemperature(value, callback) {
   const service = this.getService(Service.Thermostat);
   const characteristic = service.getCharacteristic(Characteristic.TargetTemperature);
-  const step = this.context.temperatureStep || characteristic.props.minStep || 0.5;
-  const roundedValue = this.platform.roundTemperature(value, step);
-  const minValue = typeof characteristic.props.minValue === 'number' ? characteristic.props.minValue : roundedValue;
-  const maxValue = typeof characteristic.props.maxValue === 'number' ? characteristic.props.maxValue : roundedValue;
-  const clampedValue = Math.min(maxValue, Math.max(minValue, roundedValue));
-  if (Math.abs(clampedValue - value) > (step / 10)) {
-    this.log("Adjusted target temperature for", this.displayName, "from", value + "°", "to", clampedValue + "°");
+  const normalizedValue = this.platform.normalizeCharacteristicValue(this, characteristic, value);
+  if (Math.abs(normalizedValue - value) > 0.05) {
+    this.log("Adjusted target temperature for", this.displayName, "from", value + "°", "to", normalizedValue + "°");
   } else {
-    this.log("Setting target temperature for", this.displayName, "to", clampedValue + "°");
+    this.log("Setting target temperature for", this.displayName, "to", normalizedValue + "°");
   }
-  characteristic.updateValue(clampedValue);
+  characteristic.updateValue(normalizedValue);
   this.context.logEventCounter = 9;
   const changeThermostat = this.platform.getChangeThermostat(this);
   changeThermostat.put({
-    TargetTemperature: clampedValue
+    TargetTemperature: normalizedValue
   }).then(() => {
     callback(null);
   }).catch((error) => {
@@ -679,20 +709,16 @@ function setTargetHeatingCooling(value, callback) {
 function setHeatingThresholdTemperature(value, callback) {
   const service = this.getService(Service.Thermostat);
   const characteristic = service.getCharacteristic(Characteristic.HeatingThresholdTemperature);
-  const step = this.context.temperatureStep || characteristic.props.minStep || 0.5;
-  const roundedValue = this.platform.roundTemperature(value, step);
-  const minValue = typeof characteristic.props.minValue === 'number' ? characteristic.props.minValue : roundedValue;
-  const maxValue = typeof characteristic.props.maxValue === 'number' ? characteristic.props.maxValue : roundedValue;
-  const clampedValue = Math.min(maxValue, Math.max(minValue, roundedValue));
-  if (Math.abs(clampedValue - value) > (step / 10)) {
-    this.log("Adjusted HeatingThresholdTemperature for", this.displayName, "from", value, "to", clampedValue);
+  const normalizedValue = this.platform.normalizeCharacteristicValue(this, characteristic, value);
+  if (Math.abs(normalizedValue - value) > 0.05) {
+    this.log("Adjusted HeatingThresholdTemperature for", this.displayName, "from", value, "to", normalizedValue);
   } else {
-    this.log("Setting HeatingThresholdTemperature for", this.displayName, "to", clampedValue);
+    this.log("Setting HeatingThresholdTemperature for", this.displayName, "to", normalizedValue);
   }
-  characteristic.updateValue(clampedValue);
+  characteristic.updateValue(normalizedValue);
   const changeThermostat = this.platform.getChangeThermostat(this);
   changeThermostat.put({
-    HeatingThresholdTemperature: clampedValue
+    HeatingThresholdTemperature: normalizedValue
   }).then(() => {
     callback(null);
   }).catch((error) => {
@@ -703,20 +729,16 @@ function setHeatingThresholdTemperature(value, callback) {
 function setCoolingThresholdTemperature(value, callback) {
   const service = this.getService(Service.Thermostat);
   const characteristic = service.getCharacteristic(Characteristic.CoolingThresholdTemperature);
-  const step = this.context.temperatureStep || characteristic.props.minStep || 0.5;
-  const roundedValue = this.platform.roundTemperature(value, step);
-  const minValue = typeof characteristic.props.minValue === 'number' ? characteristic.props.minValue : roundedValue;
-  const maxValue = typeof characteristic.props.maxValue === 'number' ? characteristic.props.maxValue : roundedValue;
-  const clampedValue = Math.min(maxValue, Math.max(minValue, roundedValue));
-  if (Math.abs(clampedValue - value) > (step / 10)) {
-    this.log("Adjusted CoolingThresholdTemperature for", this.displayName, "from", value, "to", clampedValue);
+  const normalizedValue = this.platform.normalizeCharacteristicValue(this, characteristic, value);
+  if (Math.abs(normalizedValue - value) > 0.05) {
+    this.log("Adjusted CoolingThresholdTemperature for", this.displayName, "from", value, "to", normalizedValue);
   } else {
-    this.log("Setting CoolingThresholdTemperature for", this.displayName, "to", clampedValue);
+    this.log("Setting CoolingThresholdTemperature for", this.displayName, "to", normalizedValue);
   }
-  characteristic.updateValue(clampedValue);
+  characteristic.updateValue(normalizedValue);
   const changeThermostat = this.platform.getChangeThermostat(this);
   changeThermostat.put({
-    CoolingThresholdTemperature: clampedValue
+    CoolingThresholdTemperature: normalizedValue
   }).then(() => {
     callback(null);
   }).catch((error) => {
