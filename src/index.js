@@ -41,6 +41,7 @@ class TccPlatform {
     this.verificationPollTimeout = null; // For smart polling after changes
     // Use WeakMap to store ChangeThermostat instances (won't be serialized)
     this.changeThermostatMap = new WeakMap();
+    this.refreshInFlight = null;
 
     // Enable config based DEBUG logging enable
     this.debug = config['debug'] || false;
@@ -196,28 +197,37 @@ class TccPlatform {
   configureAccessory(accessory) {
     this.log("configureAccessory %s", accessory.displayName);
 
-    if (accessory.getService(Service.Thermostat)) {
+    const thermostatService = accessory.getService(Service.Thermostat);
+    if (thermostatService) {
       accessory.log = this.log;
-      accessory
-        .getService(Service.Thermostat)
+      thermostatService
         .getCharacteristic(Characteristic.TargetHeatingCoolingState)
+        .on('get', getTargetHeatingCooling.bind(accessory))
         .on('set', setTargetHeatingCooling.bind(accessory));
 
-      accessory
-        .getService(Service.Thermostat)
+      thermostatService
         .getCharacteristic(Characteristic.CoolingThresholdTemperature)
+        .on('get', getCoolingThresholdTemperature.bind(accessory))
         .on('set', setCoolingThresholdTemperature.bind(accessory));
 
       // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
-      accessory
-        .getService(Service.Thermostat)
+      thermostatService
         .getCharacteristic(Characteristic.HeatingThresholdTemperature)
+        .on('get', getHeatingThresholdTemperature.bind(accessory))
         .on('set', setHeatingThresholdTemperature.bind(accessory));
 
-      accessory
-        .getService(Service.Thermostat)
+      thermostatService
         .getCharacteristic(Characteristic.TargetTemperature)
+        .on('get', getTargetTemperature.bind(accessory))
         .on('set', setTargetTemperature.bind(accessory));
+
+      thermostatService
+        .getCharacteristic(Characteristic.CurrentTemperature)
+        .on('get', getCurrentTemperature.bind(accessory));
+
+      thermostatService
+        .getCharacteristic(Characteristic.CurrentHeatingCoolingState)
+        .on('get', getCurrentHeatingCooling.bind(accessory));
       //  }
       debug("FakeGatoHistoryService", this.storage, this.refresh);
       accessory.context.logEventCounter = 9; // Update fakegato on startup
@@ -232,6 +242,19 @@ class TccPlatform {
       // Store platform reference (won't be serialized as it's a direct property, not in context)
       accessory.platform = this;
       debug("configureAccessory - created ChangeThermostat for", accessory.displayName);
+
+      const insideTempService = accessory.getService(accessory.displayName + " Temperature");
+      if (insideTempService) {
+        insideTempService
+          .getCharacteristic(Characteristic.CurrentTemperature)
+          .on('get', getSensorTemperature.bind(accessory, 'CurrentTemperature'));
+      }
+      const insideHumidityService = accessory.getService(accessory.displayName + " Humidity");
+      if (insideHumidityService) {
+        insideHumidityService
+          .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+          .on('get', getSensorHumidity.bind(accessory, 'InsideHumidity'));
+      }
     }
 
     // add fakegato logging for
@@ -243,6 +266,21 @@ class TccPlatform {
         storage: this.storage,
         minutes: this.refresh * 10 / 60
       });
+      accessory.platform = this;
+      const outsideTempService = accessory.getService("Outside Temperature");
+      if (outsideTempService) {
+        outsideTempService
+          .getCharacteristic(Characteristic.CurrentTemperature)
+          .on('get', getSensorTemperature.bind(accessory, 'OutsideTemperature'));
+      }
+      const outsideHumidityService = accessory.getService("Outside Humidity");
+      if (outsideHumidityService) {
+        outsideHumidityService
+          .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+          .on('get', getSensorHumidity.bind(accessory, 'OutsideHumidity'));
+      }
+    } else if (!thermostatService) {
+      accessory.platform = this;
     }
 
     this.myAccessories.push(accessory);
@@ -263,6 +301,7 @@ class TccPlatform {
           }
         }
       });
+      return devices;
     }).catch((err) => {
       if (err.message === 'Error: GetLocations InvalidSessionID') {
         // Silent - session will be refreshed on next poll
@@ -278,6 +317,21 @@ class TccPlatform {
         }
       });
       throw err;
+    });
+  }
+
+  refreshAccessoryState(accessory) {
+    if (!this.refreshInFlight) {
+      this.refreshInFlight = this.pollDevices()
+        .finally(() => {
+          this.refreshInFlight = null;
+        });
+    }
+    return this.refreshInFlight.then((devices) => {
+      if (devices && devices.hb && devices.hb[accessory.context.ThermostatID]) {
+        return devices.hb[accessory.context.ThermostatID];
+      }
+      throw new Error(`No state available for ${accessory.displayName || accessory.context.name}`);
     });
   }
 
@@ -426,6 +480,7 @@ class TccAccessory {
       this.accessory.context.logEventCounter = 9; // Update fakegato on startup
       this.accessory.context.temperatureStep = temperatureStep;
       this.accessory.context.displayedUnits = displayedUnits;
+      this.accessory.platform = platform;
 
       this.accessory.getService(Service.AccessoryInformation)
         .setCharacteristic(Characteristic.Manufacturer, "TCC")
@@ -446,66 +501,73 @@ class TccAccessory {
           .setProps({
             minValue: -100, // If you need this, you have major problems!!!!!
             maxValue: 100
-          });
+          })
+          .on('get', getSensorTemperature.bind(this.accessory, 'CurrentTemperature'));
       }
 
       if (createInsideHumiditySensors) {
         debug("TccAccessory() " + this.name + " insideHumidity = true, existing sensor");
         this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
         this.InsideHumidityService
-          .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+          .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+          .on('get', getSensorHumidity.bind(this.accessory, 'InsideHumidity'));
       }
 
       //       .setProps({validValues: hbValues.TargetHeatingCoolingStateValidValues})
-      this.accessory
-        .getService(Service.Thermostat)
+      const thermostatService = this.accessory.getService(Service.Thermostat);
+      thermostatService
         .getCharacteristic(Characteristic.TargetHeatingCoolingState)
         .setProps({
           validValues: device.TargetHeatingCoolingStateValidValues
         })
+        .on('get', getTargetHeatingCooling.bind(this.accessory))
         .on('set', setTargetHeatingCooling.bind(this.accessory));
 
-      this.accessory
-        .getService(Service.Thermostat)
+      thermostatService
         .getCharacteristic(Characteristic.CurrentTemperature)
         .setProps({
           minValue: -100, // If you need this, you have major problems!!!!!
           maxValue: 100
-        });
+        })
+        .on('get', getCurrentTemperature.bind(this.accessory));
 
-      this.accessory
-        .getService(Service.Thermostat)
+      thermostatService
         .getCharacteristic(Characteristic.TargetTemperature)
         .setProps({
           minValue: parseFloat(device.TargetTemperatureHeatMinValue),
           maxValue: parseFloat(device.TargetTemperatureCoolMaxValue),
           minStep: temperatureStep
         })
+        .on('get', getTargetTemperature.bind(this.accessory))
         .on('set', setTargetTemperature.bind(this.accessory));
 
       if (device.device.UI.CanSetSwitchAuto) {
         // Only available on models with an Auto Mode
-        this.accessory
-          .getService(Service.Thermostat)
+        thermostatService
           .getCharacteristic(Characteristic.CoolingThresholdTemperature)
           .setProps({
             minValue: parseFloat(device.TargetTemperatureCoolMinValue),
             maxValue: parseFloat(device.TargetTemperatureCoolMaxValue),
             minStep: temperatureStep
           })
+          .on('get', getCoolingThresholdTemperature.bind(this.accessory))
           .on('set', setCoolingThresholdTemperature.bind(this.accessory));
 
         // this.addOptionalCharacteristic(Characteristic.HeatingThresholdTemperature);
-        this.accessory
-          .getService(Service.Thermostat)
+        thermostatService
           .getCharacteristic(Characteristic.HeatingThresholdTemperature)
           .setProps({
             minValue: parseFloat(device.TargetTemperatureHeatMinValue),
             maxValue: parseFloat(device.TargetTemperatureHeatMaxValue),
             minStep: temperatureStep
           })
+          .on('get', getHeatingThresholdTemperature.bind(this.accessory))
           .on('set', setHeatingThresholdTemperature.bind(this.accessory));
       }
+
+      thermostatService
+        .getCharacteristic(Characteristic.CurrentHeatingCoolingState)
+        .on('get', getCurrentHeatingCooling.bind(this.accessory));
 
       this.accessory
         .getService(Service.Thermostat).log = this.log;
@@ -528,6 +590,7 @@ class TccAccessory {
       this.accessory = platform.getAccessoryByName(this.name);
       this.accessory.context.temperatureStep = temperatureStep;
       this.accessory.context.displayedUnits = displayedUnits;
+      this.accessory.platform = platform;
       debug("Heating Threshold", this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.HeatingThresholdTemperature).props);
       debug("Cooling Threshold", this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.CoolingThresholdTemperature).props);
       const thermostatService = this.accessory.getService(Service.Thermostat);
@@ -563,7 +626,8 @@ class TccAccessory {
           .setProps({
             minValue: -100, // If you need this, you have major problems!!!!!
             maxValue: 100
-          });
+          })
+          .on('get', getSensorTemperature.bind(this.accessory, 'CurrentTemperature'));
       } else if (!createInsideTemperatureSensors && this.accessory.getService(this.name + " Temperature")) {
         this.accessory.removeService(this.accessory.getService(this.name + " Temperature"));
       }
@@ -572,7 +636,8 @@ class TccAccessory {
         this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
 
         this.InsideHumidityService
-          .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+          .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+          .on('get', getSensorHumidity.bind(this.accessory, 'InsideHumidity'));
       } else if (!createInsideHumiditySensors && this.accessory.getService(this.name + " Humidity")) {
         this.accessory.removeService(this.accessory.getService(this.name + " Humidity"));
       }
@@ -598,6 +663,7 @@ class TccSensorsAccessory {
       this.accessory.context.ThermostatID = device.ThermostatID;
       this.accessory.context.name = this.name;
       this.accessory.context.logEventCounter = 9; // Update fakegato on startup
+      this.accessory.platform = platform;
 
       this.accessory.getService(Service.AccessoryInformation)
         .setCharacteristic(Characteristic.Manufacturer, "TCC")
@@ -613,7 +679,8 @@ class TccSensorsAccessory {
         .setProps({
           minValue: -100, // If you need this, you have major problems!!!!!
           maxValue: 100
-        });
+        })
+        .on('get', getSensorTemperature.bind(this.accessory, 'OutsideTemperature'));
 
       // Check for invalid humidity value
       if (this.device.OutsideHumidity === 128) {
@@ -623,7 +690,8 @@ class TccSensorsAccessory {
         debug("TccSensorsAccessory() " + this.name + " outsideHumidity = true, existing sensor");
         this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
         this.OutsideHumidityService
-          .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+          .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+          .on('get', getSensorHumidity.bind(this.accessory, 'OutsideHumidity'));
 
         this.accessory.loggingService = new FakeGatoHistoryService("weather", this.accessory, {
           storage: this.storage,
@@ -639,6 +707,7 @@ class TccSensorsAccessory {
 
       // need to check if accessory/zone/thermostat already exists, but user added temp/humidity sensors then must declare
       this.accessory = platform.getAccessoryByName(this.name);
+      this.accessory.platform = platform;
       if (!this.accessory.getService("Outside Temperature")) {
         debug("TccSensorsAccessory() " + this.name + " OutsideTemperature = true, adding sensor");
         this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "Outside");
@@ -648,7 +717,8 @@ class TccSensorsAccessory {
           .setProps({
             minValue: -100, // If you need this, you have major problems!!!!!
             maxValue: 100
-          });
+          })
+          .on('get', getSensorTemperature.bind(this.accessory, 'OutsideTemperature'));
       }
 
       // Check for invalid humidity value
@@ -664,12 +734,77 @@ class TccSensorsAccessory {
           this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
 
           this.OutsideHumidityService
-            .getCharacteristic(Characteristic.CurrentRelativeHumidity);
+            .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+            .on('get', getSensorHumidity.bind(this.accessory, 'OutsideHumidity'));
         }
       }
       return this.accessory;
     }
   }
+}
+
+function handleRefreshError(callback, error) {
+  callback(error instanceof Error ? error : new Error(error));
+}
+
+function getTargetTemperature(callback) {
+  this.platform.refreshAccessoryState(this).then((device) => {
+    const service = this.getService(Service.Thermostat);
+    const characteristic = service.getCharacteristic(Characteristic.TargetTemperature);
+    const value = this.platform.normalizeCharacteristicValue(this, characteristic, device.TargetTemperature);
+    callback(null, value);
+  }).catch((error) => handleRefreshError(callback, error));
+}
+
+function getCurrentTemperature(callback) {
+  this.platform.refreshAccessoryState(this).then((device) => {
+    const value = device.CurrentTemperature;
+    callback(null, value === undefined ? null : value);
+  }).catch((error) => handleRefreshError(callback, error));
+}
+
+function getTargetHeatingCooling(callback) {
+  this.platform.refreshAccessoryState(this).then((device) => {
+    callback(null, device.TargetHeatingCoolingState);
+  }).catch((error) => handleRefreshError(callback, error));
+}
+
+function getCurrentHeatingCooling(callback) {
+  this.platform.refreshAccessoryState(this).then((device) => {
+    callback(null, device.CurrentHeatingCoolingState);
+  }).catch((error) => handleRefreshError(callback, error));
+}
+
+function getHeatingThresholdTemperature(callback) {
+  this.platform.refreshAccessoryState(this).then((device) => {
+    const service = this.getService(Service.Thermostat);
+    const characteristic = service.getCharacteristic(Characteristic.HeatingThresholdTemperature);
+    const value = this.platform.normalizeCharacteristicValue(this, characteristic, device.HeatingThresholdTemperature);
+    callback(null, value);
+  }).catch((error) => handleRefreshError(callback, error));
+}
+
+function getCoolingThresholdTemperature(callback) {
+  this.platform.refreshAccessoryState(this).then((device) => {
+    const service = this.getService(Service.Thermostat);
+    const characteristic = service.getCharacteristic(Characteristic.CoolingThresholdTemperature);
+    const value = this.platform.normalizeCharacteristicValue(this, characteristic, device.CoolingThresholdTemperature);
+    callback(null, value);
+  }).catch((error) => handleRefreshError(callback, error));
+}
+
+function getSensorTemperature(property, callback) {
+  this.platform.refreshAccessoryState(this).then((device) => {
+    const value = device[property];
+    callback(null, value === undefined ? null : value);
+  }).catch((error) => handleRefreshError(callback, error));
+}
+
+function getSensorHumidity(property, callback) {
+  this.platform.refreshAccessoryState(this).then((device) => {
+    const value = device[property];
+    callback(null, value === undefined ? null : value);
+  }).catch((error) => handleRefreshError(callback, error));
 }
 
 function setTargetTemperature(value, callback) {
