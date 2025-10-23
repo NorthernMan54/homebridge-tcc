@@ -74,9 +74,9 @@ tcc.prototype.pollThermostat = function() {
       this.thermostats = current;
       return (current);
     } catch (err) {
-      // console.error("pollThermostat Error:", err.message);
-      // debug("pollThermostat", err);
-      throw new Error(err);
+      console.error("pollThermostat Error:", err.message);
+      debug("pollThermostat", err);
+      throw err;
     }
   });
 };
@@ -97,9 +97,9 @@ tcc.prototype.ChangeThermostat = function(desiredState) {
       var thermostat = await this._GetThermostat(desiredState.ThermostatID);
       return (thermostat);
     } catch (err) {
-      console.error("ChangeThermostat Error:", err);
+      console.error("ChangeThermostat Error:", err.message);
       this.sessionID = null;
-      throw new Error(err);
+      throw err;
     }
   });
 };
