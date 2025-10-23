@@ -591,6 +591,17 @@ class ChangeThermostat {
 
       if (!this.timeout) {
         this.timeout = setTimeout(() => {
+          if (!this.thermostats) {
+            const error = new Error('Thermostat service not initialized yet. Please try again in a moment.');
+            for (const deferral of this.deferrals) {
+              deferral.reject(error);
+            }
+            this.desiredState = {};
+            this.deferrals = [];
+            this.timeout = null;
+            return;
+          }
+
           this.thermostats.ChangeThermostat(this.desiredState).then((thermostat) => {
             for (const deferral of this.deferrals) {
               deferral.resolve(thermostat);
