@@ -614,6 +614,7 @@ class ChangeThermostat {
 
       if (!this.timeout) {
         this.timeout = setTimeout(() => {
+          debug("ChangeThermostat executing with desiredState:", JSON.stringify(this.desiredState));
           if (!this.thermostats) {
             const error = new Error('Thermostat service not initialized yet. Please try again in a moment.');
             for (const deferral of this.deferrals) {
@@ -628,8 +629,14 @@ class ChangeThermostat {
           this.thermostats.ChangeThermostat(this.desiredState).then((thermostat) => {
             // Update the accessory with the new thermostat data immediately
             if (this.platform && this.accessory && thermostat) {
+              debug("ChangeThermostat success - updating accessory with:", JSON.stringify({
+                Name: thermostat.Name,
+                TargetTemperature: thermostat.TargetTemperature,
+                HeatingThresholdTemperature: thermostat.HeatingThresholdTemperature,
+                CoolingThresholdTemperature: thermostat.CoolingThresholdTemperature,
+                TargetHeatingCoolingState: thermostat.TargetHeatingCoolingState
+              }));
               this.platform.updateStatus(this.accessory, thermostat);
-              debug("ChangeThermostat success - updated accessory status");
             }
 
             for (const deferral of this.deferrals) {
