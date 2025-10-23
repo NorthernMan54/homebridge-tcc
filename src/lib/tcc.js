@@ -154,6 +154,26 @@ tcc.prototype.ChangeThermostat = function(desiredState) {
   });
 };
 
+// Public interface to retrieve a single thermostat snapshot
+
+tcc.prototype.getThermostatSnapshot = function(ThermostatID) {
+  return queue.add(async () => {
+    try {
+      if (!this.sessionID) {
+        this.sessionID = await this._login();
+        debug("TCC - Login Succeeded");
+      }
+      const thermostat = await this._GetThermostat(ThermostatID);
+      tccMessage.validateThermostatData(thermostat, `getThermostatSnapshot ID:${ThermostatID}`);
+      return thermostat;
+    } catch (err) {
+      console.error("getThermostatSnapshot Error:", err.message);
+      this.sessionID = null;
+      throw err;
+    }
+  });
+};
+
 // private interface to update thermostat settings
 
 tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {

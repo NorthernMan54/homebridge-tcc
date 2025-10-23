@@ -38,10 +38,28 @@ class TccPlatform {
     this.thermostats = null;
     this.outsideSensorsCreated = false;
     this.pollInterval = null;
+    this.backgroundRefreshTimer = null;
     this.verificationPollTimeout = null; // For smart polling after changes
     // Use WeakMap to store ChangeThermostat instances (won't be serialized)
     this.changeThermostatMap = new WeakMap();
     this.refreshInFlight = null;
+    this.backgroundRefresh = Object.prototype.hasOwnProperty.call(config, 'backgroundRefresh') ? config.backgroundRefresh : 180;
+    if (this.backgroundRefresh === false) {
+      this.backgroundRefresh = 0;
+    }
+    if (this.backgroundRefresh !== undefined && this.backgroundRefresh !== null) {
+      this.backgroundRefresh = Number(this.backgroundRefresh);
+      if (!Number.isFinite(this.backgroundRefresh) || this.backgroundRefresh <= 0) {
+        this.backgroundRefresh = 0;
+      } else {
+        this.backgroundRefresh = Math.max(60, Math.floor(this.backgroundRefresh));
+        if (this.backgroundRefresh >= this.refresh) {
+          this.backgroundRefresh = 0; // Only useful when faster than primary poll
+        }
+      }
+    } else {
+      this.backgroundRefresh = 0;
+    }
 
     // Enable config based DEBUG logging enable
     this.debug = config['debug'] || false;
@@ -58,6 +76,10 @@ class TccPlatform {
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
+    }
+    if (this.backgroundRefreshTimer) {
+      clearTimeout(this.backgroundRefreshTimer);
+      this.backgroundRefreshTimer = null;
     }
     if (this.verificationPollTimeout) {
       clearTimeout(this.verificationPollTimeout);
@@ -135,6 +157,7 @@ class TccPlatform {
       });
       this.verificationPollTimeout = null;
     }, delay);
+    this.ensureBackgroundRefresh();
   }
 
   didFinishLaunching() {
@@ -186,6 +209,8 @@ class TccPlatform {
     }).catch((err) => {
       this.log("Critical Error - No devices created, please restart.");
       this.log.error(err);
+    }).finally(() => {
+      this.startBackgroundRefresh();
     });
     this.pollInterval = setInterval(() => {
       this.pollDevices().catch(err => {
@@ -391,8 +416,9 @@ class TccPlatform {
 
       service.getCharacteristic(Characteristic.Name)
         .updateValue(device.Name);
-      service.getCharacteristic(Characteristic.TargetTemperature)
-        .updateValue(device.TargetTemperature);
+      const targetCharacteristic = service.getCharacteristic(Characteristic.TargetTemperature);
+      const normalizedTarget = this.normalizeCharacteristicValue(accessory, targetCharacteristic, device.TargetTemperature);
+      targetCharacteristic.updateValue(normalizedTarget);
       service.getCharacteristic(Characteristic.CurrentTemperature)
         .updateValue(device.CurrentTemperature);
       service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
@@ -400,10 +426,16 @@ class TccPlatform {
       service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
         .updateValue(device.TargetHeatingCoolingState);
       if (device.device.UI.CanSetSwitchAuto) {
-        service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
-          .updateValue(device.CoolingThresholdTemperature);
-        service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
-          .updateValue(device.HeatingThresholdTemperature);
+        const coolingChar = service.getCharacteristic(Characteristic.CoolingThresholdTemperature);
+        if (coolingChar) {
+          const normalizedCooling = this.normalizeCharacteristicValue(accessory, coolingChar, device.CoolingThresholdTemperature);
+          coolingChar.updateValue(normalizedCooling);
+        }
+        const heatingChar = service.getCharacteristic(Characteristic.HeatingThresholdTemperature);
+        if (heatingChar) {
+          const normalizedHeating = this.normalizeCharacteristicValue(accessory, heatingChar, device.HeatingThresholdTemperature);
+          heatingChar.updateValue(normalizedHeating);
+        }
       }
 
       // Fakegato Support
@@ -418,6 +450,76 @@ class TccPlatform {
         accessory.context.logEventCounter = 0;
       }
     }
+  }
+
+  ensureBackgroundRefresh() {
+    if (this.backgroundRefresh && !this.backgroundRefreshTimer) {
+      this.startBackgroundRefresh();
+    }
+  }
+
+  startBackgroundRefresh() {
+    if (!this.backgroundRefresh || this.backgroundRefresh <= 0) {
+      debug("Background refresh disabled");
+      return;
+    }
+    if (this.backgroundRefreshTimer) {
+      return;
+    }
+
+    const runRefresh = () => {
+      this.runBackgroundRefresh()
+        .catch((err) => {
+          debug("Background refresh error:", err.message);
+        })
+        .finally(() => {
+          if (this.backgroundRefreshTimer !== null) {
+            this.backgroundRefreshTimer = setTimeout(runRefresh, this.backgroundRefresh * 1000);
+          }
+        });
+    };
+
+    debug("Starting background refresh every %s seconds", this.backgroundRefresh);
+    this.backgroundRefreshTimer = setTimeout(runRefresh, this.backgroundRefresh * 1000);
+  }
+
+  stopBackgroundRefresh() {
+    if (this.backgroundRefreshTimer) {
+      clearTimeout(this.backgroundRefreshTimer);
+      this.backgroundRefreshTimer = null;
+    }
+  }
+
+  runBackgroundRefresh() {
+    if (!this.thermostats || this.myAccessories.length === 0) {
+      return Promise.resolve();
+    }
+    const processed = new Set();
+    const tasks = [];
+    for (const accessory of this.myAccessories) {
+      const thermostatId = accessory.context && accessory.context.ThermostatID;
+      if (!thermostatId || processed.has(thermostatId)) {
+        continue;
+      }
+      processed.add(thermostatId);
+      const task = this.thermostats.getThermostatSnapshot(thermostatId)
+        .then((thermostat) => {
+          if (!thermostat) {
+            return;
+          }
+          this.myAccessories
+            .filter(acc => acc.context && acc.context.ThermostatID === thermostatId)
+            .forEach(acc => this.updateStatus(acc, thermostat));
+        })
+        .catch((err) => {
+          debug("getThermostatSnapshot(%s) failed: %s", thermostatId, err.message);
+        });
+      tasks.push(task);
+    }
+    if (tasks.length === 0) {
+      return Promise.resolve();
+    }
+    return Promise.allSettled(tasks);
   }
 
   getAccessoryByName(accessoryName) {
