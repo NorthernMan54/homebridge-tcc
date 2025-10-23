@@ -141,7 +141,7 @@ class TccPlatform {
       });
 
       // only attach this to the actual thermostat accessories, not the sensors accessory
-      accessory.context.ChangeThermostat = new ChangeThermostat(accessory, this.thermostats);
+      accessory.context.ChangeThermostat = new ChangeThermostat(accessory, this.thermostats, this);
       debug("configureAccessory", accessory.context.ChangeThermostat);
     }
 
@@ -416,7 +416,7 @@ class TccAccessory {
 
       this.accessory
         .getService(Service.Thermostat).addCharacteristic(CustomCharacteristics.ValvePosition);
-      this.accessory.context.ChangeThermostat = new ChangeThermostat(this.accessory, platform.thermostats);
+      this.accessory.context.ChangeThermostat = new ChangeThermostat(this.accessory, platform.thermostats, platform);
       platform.api.registerPlatformAccessories("homebridge-tcc", "tcc", [this.accessory]);
       platform.myAccessories.push(this.accessory);
       return this.accessory;
@@ -592,12 +592,14 @@ function setCoolingThresholdTemperature(value, callback) {
 
 // Consolidate change requests received over 100ms into a single request
 class ChangeThermostat {
-  constructor(accessory, thermostatsInstance) {
+  constructor(accessory, thermostatsInstance, platform) {
     this.desiredState = {};
     this.deferrals = [];
     this.ThermostatID = accessory.context.ThermostatID;
     this.waitTimeUpdate = 100; // wait 100ms before processing change
     this.thermostats = thermostatsInstance;
+    this.platform = platform;
+    this.accessory = accessory;
   }
 
   put(state) {
@@ -624,6 +626,12 @@ class ChangeThermostat {
           }
 
           this.thermostats.ChangeThermostat(this.desiredState).then((thermostat) => {
+            // Update the accessory with the new thermostat data immediately
+            if (this.platform && this.accessory && thermostat) {
+              this.platform.updateStatus(this.accessory, thermostat);
+              debug("ChangeThermostat success - updated accessory status");
+            }
+
             for (const deferral of this.deferrals) {
               deferral.resolve(thermostat);
             }
