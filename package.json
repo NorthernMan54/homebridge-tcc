@@ -1,6 +1,6 @@
 {
   "name": "homebridge-tcc",
-  "version": "0.3.0",
+  "version": "0.3.1-beta.0",
   "description": "Honeywell Total Connect Comfort support for Homebridge: https://github.com/nfarina/homebridge",
   "license": "ISC",
   "main": "src/index.js",
