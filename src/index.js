@@ -38,6 +38,8 @@ class TccPlatform {
     this.thermostats = null;
     this.outsideSensorsCreated = false;
     this.pollInterval = null;
+    // Use WeakMap to store ChangeThermostat instances (won't be serialized)
+    this.changeThermostatMap = new WeakMap();
 
     // Enable config based DEBUG logging enable
     this.debug = config['debug'] || false;
@@ -55,6 +57,17 @@ class TccPlatform {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
     }
+  }
+
+  getChangeThermostat(accessory) {
+    let changeThermostat = this.changeThermostatMap.get(accessory);
+    if (!changeThermostat) {
+      // Create new instance if not found (e.g., after restart)
+      changeThermostat = new ChangeThermostat(accessory, this.thermostats, this);
+      this.changeThermostatMap.set(accessory, changeThermostat);
+      debug("Created new ChangeThermostat instance for", accessory.displayName);
+    }
+    return changeThermostat;
   }
 
   didFinishLaunching() {
@@ -141,8 +154,11 @@ class TccPlatform {
       });
 
       // only attach this to the actual thermostat accessories, not the sensors accessory
-      accessory.context.ChangeThermostat = new ChangeThermostat(accessory, this.thermostats, this);
-      debug("configureAccessory", accessory.context.ChangeThermostat);
+      // Store in WeakMap to avoid circular reference in serialization
+      this.changeThermostatMap.set(accessory, new ChangeThermostat(accessory, this.thermostats, this));
+      // Store platform reference (won't be serialized as it's a direct property, not in context)
+      accessory.platform = this;
+      debug("configureAccessory - created ChangeThermostat for", accessory.displayName);
     }
 
     // add fakegato logging for
@@ -416,7 +432,8 @@ class TccAccessory {
 
       this.accessory
         .getService(Service.Thermostat).addCharacteristic(CustomCharacteristics.ValvePosition);
-      this.accessory.context.ChangeThermostat = new ChangeThermostat(this.accessory, platform.thermostats, platform);
+      // Store in WeakMap to avoid circular reference in serialization
+      platform.changeThermostatMap.set(this.accessory, new ChangeThermostat(this.accessory, platform.thermostats, platform));
       platform.api.registerPlatformAccessories("homebridge-tcc", "tcc", [this.accessory]);
       platform.myAccessories.push(this.accessory);
       return this.accessory;
@@ -547,7 +564,8 @@ class TccSensorsAccessory {
 function setTargetTemperature(value, callback) {
   this.log("Setting target temperature for", this.displayName, "to", value + "°");
   this.context.logEventCounter = 9;
-  this.context.ChangeThermostat.put({
+  const changeThermostat = this.platform.getChangeThermostat(this);
+  changeThermostat.put({
     TargetTemperature: value
   }).then(() => {
     callback(null);
@@ -559,7 +577,8 @@ function setTargetTemperature(value, callback) {
 function setTargetHeatingCooling(value, callback) {
   this.log("Setting switch for", this.displayName, "to", value);
   this.context.logEventCounter = 9;
-  this.context.ChangeThermostat.put({
+  const changeThermostat = this.platform.getChangeThermostat(this);
+  changeThermostat.put({
     TargetHeatingCooling: value
   }).then(() => {
     callback(null);
@@ -570,7 +589,8 @@ function setTargetHeatingCooling(value, callback) {
 
 function setHeatingThresholdTemperature(value, callback) {
   this.log("Setting HeatingThresholdTemperature for", this.displayName, "to", value);
-  this.context.ChangeThermostat.put({
+  const changeThermostat = this.platform.getChangeThermostat(this);
+  changeThermostat.put({
     HeatingThresholdTemperature: value
   }).then(() => {
     callback(null);
@@ -581,7 +601,8 @@ function setHeatingThresholdTemperature(value, callback) {
 
 function setCoolingThresholdTemperature(value, callback) {
   this.log("Setting CoolingThresholdTemperature for", this.displayName, "to", value);
-  this.context.ChangeThermostat.put({
+  const changeThermostat = this.platform.getChangeThermostat(this);
+  changeThermostat.put({
     CoolingThresholdTemperature: value
   }).then(() => {
     callback(null);
@@ -598,9 +619,8 @@ class ChangeThermostat {
     this.ThermostatID = accessory.context.ThermostatID;
     this.waitTimeUpdate = 100; // wait 100ms before processing change
     this.thermostats = thermostatsInstance;
-    // Store displayName instead of references to avoid circular dependency
-    this.accessoryDisplayName = accessory.displayName;
-    this.platformGetter = () => platform; // Use getter function instead of direct reference
+    this.platform = platform;
+    this.accessory = accessory;
   }
 
   put(state) {
@@ -629,20 +649,15 @@ class ChangeThermostat {
 
           this.thermostats.ChangeThermostat(this.desiredState).then((thermostat) => {
             // Update the accessory with the new thermostat data immediately
-            const platform = this.platformGetter();
-            if (platform && thermostat) {
-              // Find the accessory by display name
-              const accessory = platform.myAccessories.find(acc => acc.displayName === this.accessoryDisplayName);
-              if (accessory) {
-                debug("ChangeThermostat success - updating accessory with:", JSON.stringify({
-                  Name: thermostat.Name,
-                  TargetTemperature: thermostat.TargetTemperature,
-                  HeatingThresholdTemperature: thermostat.HeatingThresholdTemperature,
-                  CoolingThresholdTemperature: thermostat.CoolingThresholdTemperature,
-                  TargetHeatingCoolingState: thermostat.TargetHeatingCoolingState
-                }));
-                platform.updateStatus(accessory, thermostat);
-              }
+            if (this.platform && this.accessory && thermostat) {
+              debug("ChangeThermostat success - updating accessory with:", JSON.stringify({
+                Name: thermostat.Name,
+                TargetTemperature: thermostat.TargetTemperature,
+                HeatingThresholdTemperature: thermostat.HeatingThresholdTemperature,
+                CoolingThresholdTemperature: thermostat.CoolingThresholdTemperature,
+                TargetHeatingCoolingState: thermostat.TargetHeatingCoolingState
+              }));
+              this.platform.updateStatus(this.accessory, thermostat);
             }
 
             for (const deferral of this.deferrals) {
