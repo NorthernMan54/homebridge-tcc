@@ -224,7 +224,7 @@ class TccPlatform {
     }
 
     // fakegato for outside sensor
-    if (accessory.displayName === "Outside Sensors") {
+    if (accessory.displayName === "Outside Sensors" && accessory.loggingService) {
       accessory.context.logEventCounter++;
       if (!(accessory.context.logEventCounter % 10)) {
         accessory.loggingService.addEntry({
