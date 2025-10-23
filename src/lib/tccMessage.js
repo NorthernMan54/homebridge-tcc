@@ -62,6 +62,9 @@ function GetLocationsMessage(sessionID) {
 //  2 - Permanent override
 
 function ChangeThermostatMessage(sessionID, desiredState, thermostat, usePermanentHolds) {
+  if (!thermostat || !thermostat.device || !thermostat.device.UI) {
+    throw new Error("Invalid thermostat data in ChangeThermostatMessage");
+  }
   // debug("ChangeThermostatMessage", desiredState);
   return ({
     ChangeThermostatUI: {
@@ -144,19 +147,21 @@ function GetThermostatMessage(sessionID, ThermostatID) {
 }
 
 function normalizeToHb(devices) {
-  devices.hb = [];
+  devices.hb = {};
   // Flatten structure
   if (Array.isArray(devices.LocationInfo)) {
     devices.LocationInfo.forEach((LocationInfo) => {
-      if (Array.isArray(LocationInfo.Thermostats.ThermostatInfo)) {
-        LocationInfo.Thermostats.ThermostatInfo.forEach((item) => {
-          devices.hb[item.ThermostatID.toString()] = toHb(item);
-        });
-      } else {
-        devices.hb[LocationInfo.Thermostats.ThermostatInfo.ThermostatID.toString()] = toHb(LocationInfo.Thermostats.ThermostatInfo);
+      if (LocationInfo && LocationInfo.Thermostats && LocationInfo.Thermostats.ThermostatInfo) {
+        if (Array.isArray(LocationInfo.Thermostats.ThermostatInfo)) {
+          LocationInfo.Thermostats.ThermostatInfo.forEach((item) => {
+            devices.hb[item.ThermostatID.toString()] = toHb(item);
+          });
+        } else {
+          devices.hb[LocationInfo.Thermostats.ThermostatInfo.ThermostatID.toString()] = toHb(LocationInfo.Thermostats.ThermostatInfo);
+        }
       }
     });
-  } else {
+  } else if (devices.LocationInfo && devices.LocationInfo.Thermostats && devices.LocationInfo.Thermostats.ThermostatInfo) {
     if (Array.isArray(devices.LocationInfo.Thermostats.ThermostatInfo)) {
       devices.LocationInfo.Thermostats.ThermostatInfo.forEach((item) => {
         devices.hb[item.ThermostatID.toString()] = toHb(item);
@@ -193,7 +198,7 @@ function toHb(thermostat) {
 }
 
 function toCelcius(value, thermostat) {
-  if (value) {
+  if (value !== null && value !== undefined) {
     return (thermostat.UI.DisplayedUnits === "C" ? parseFloat(value) : parseFloat(((value - 32) * 5 / 9).toFixed(1)));
   } else {
     return null;
@@ -201,6 +206,9 @@ function toCelcius(value, thermostat) {
 }
 
 function toThermostat(value, thermostat) {
+  if (!thermostat || !thermostat.device || !thermostat.device.UI) {
+    return value;
+  }
   return (thermostat.device.UI.DisplayedUnits === "C" ? value : ((value * 9 / 5) + 32).toFixed(0));
 }
 

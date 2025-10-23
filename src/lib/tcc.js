@@ -261,7 +261,7 @@ tcc.prototype._GetLocationListData = async function(withRetry) {
       const parsedResponse = xmlParser.parse(response.body);
       const GetLocationsResult = parsedResponse["soap:Envelope"]["soap:Body"].GetLocationsResponse.GetLocationsResult;
 
-      if (GetLocationsResult.Result === "Success" && GetLocationsResult.Locations.LocationInfo) {
+      if (GetLocationsResult.Result === "Success" && GetLocationsResult.Locations && GetLocationsResult.Locations.LocationInfo) {
         return tccMessage.normalizeToHb(GetLocationsResult.Locations);
       } else {
         this.sessionID = null;

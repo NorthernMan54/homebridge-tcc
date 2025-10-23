@@ -46,6 +46,15 @@ class TccPlatform {
     }
 
     api.on('didFinishLaunching', () => this.didFinishLaunching());
+    api.on('shutdown', () => this.shutdown());
+  }
+
+  shutdown() {
+    debug("Shutting down platform, cleaning up resources");
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
   }
 
   didFinishLaunching() {
@@ -53,6 +62,10 @@ class TccPlatform {
 
     this.thermostats = new Tcc(this);
     this.thermostats.pollThermostat().then((devices) => {
+      if (!devices || !devices.hb) {
+        this.log.error("Invalid device data received from TCC");
+        return;
+      }
       for (const zone in devices.hb) {
         debug("Creating accessory for", devices.hb[zone].Name + "(" + devices.hb[zone].ThermostatID + ")");
         const thermostatAccessory = new TccAccessory(this, devices.hb[zone], this.sensors);
@@ -87,7 +100,11 @@ class TccPlatform {
       this.log("Critical Error - No devices created, please restart.");
       this.log.error(err);
     });
-    this.pollInterval = setInterval(() => this.pollDevices(), this.refresh * 1000);
+    this.pollInterval = setInterval(() => {
+      this.pollDevices().catch(err => {
+        this.log.error("pollDevices interval error:", err.message);
+      });
+    }, this.refresh * 1000);
   }
 
   configureAccessory(accessory) {
@@ -175,6 +192,10 @@ class TccPlatform {
   }
 
   updateStatus(accessory, device) {
+    if (!device) {
+      this.log.error("updateStatus called with null device for accessory:", accessory.displayName);
+      return;
+    }
     accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Name)
       .updateValue(device.Name);
     accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Model)
