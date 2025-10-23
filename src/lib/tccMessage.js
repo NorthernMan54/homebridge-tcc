@@ -9,7 +9,8 @@ module.exports = {
   GetThermostatMessage: GetThermostatMessage,
   normalizeToHb: normalizeToHb,
   toHb: toHb,
-  diff: diff
+  diff: diff,
+  validateThermostatData: validateThermostatData
 };
 
 function soapMessage(body) {
@@ -394,5 +395,65 @@ function isEmptyObject(obj) {
   for (name in obj) {
     return false;
   }
+  return true;
+}
+
+function validateThermostatData(data, context = 'thermostat') {
+  // Basic type check
+  if (!data || typeof data !== 'object') {
+    throw new Error(`Invalid ${context} data: not an object`);
+  }
+
+  // Required fields
+  const requiredFields = ['ThermostatID', 'Name'];
+  for (const field of requiredFields) {
+    if (data[field] === undefined || data[field] === null) {
+      throw new Error(`Invalid ${context} data: missing required field '${field}'`);
+    }
+  }
+
+  // Validate temperature fields if present
+  const tempFields = [
+    'CurrentTemperature',
+    'TargetTemperature',
+    'HeatingThresholdTemperature',
+    'CoolingThresholdTemperature',
+    'OutsideTemperature'
+  ];
+
+  for (const field of tempFields) {
+    if (data[field] !== undefined && data[field] !== null) {
+      const temp = data[field];
+      // Reasonable temperature range: -50°C to 60°C
+      if (typeof temp !== 'number' || temp < -50 || temp > 60) {
+        console.warn(`Warning: Suspicious temperature value for ${field}: ${temp}°C in ${context}`);
+      }
+    }
+  }
+
+  // Validate state values if present
+  if (data.CurrentHeatingCoolingState !== undefined) {
+    if (![0, 1, 2].includes(data.CurrentHeatingCoolingState)) {
+      throw new Error(`Invalid CurrentHeatingCoolingState: ${data.CurrentHeatingCoolingState}`);
+    }
+  }
+
+  if (data.TargetHeatingCoolingState !== undefined) {
+    if (![0, 1, 2, 3].includes(data.TargetHeatingCoolingState)) {
+      throw new Error(`Invalid TargetHeatingCoolingState: ${data.TargetHeatingCoolingState}`);
+    }
+  }
+
+  // Validate humidity if present (0-100, or 128 for invalid)
+  const humidityFields = ['InsideHumidity', 'OutsideHumidity'];
+  for (const field of humidityFields) {
+    if (data[field] !== undefined && data[field] !== null) {
+      const humidity = data[field];
+      if (humidity !== 128 && (humidity < 0 || humidity > 100)) {
+        console.warn(`Warning: Suspicious humidity value for ${field}: ${humidity}% in ${context}`);
+      }
+    }
+  }
+
   return true;
 }

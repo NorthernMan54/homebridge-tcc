@@ -72,6 +72,16 @@ tcc.prototype.pollThermostat = function() {
       if (this.thermostats.LocationInfo && current.LocationInfo) {
         debug("pollThermostat - delta", JSON.stringify(tccMessage.diff(this.thermostats, current), null, 2));
       }
+      // Validate all thermostats before storing
+      if (current.hb) {
+        for (const id in current.hb) {
+          try {
+            tccMessage.validateThermostatData(current.hb[id], `pollThermostat ID:${id}`);
+          } catch (err) {
+            console.error(`Validation failed for thermostat ${id}:`, err.message);
+          }
+        }
+      }
       this.thermostats = current;
       return (current);
     } catch (err) {
@@ -87,18 +97,57 @@ tcc.prototype.pollThermostat = function() {
 tcc.prototype.ChangeThermostat = function(desiredState) {
   // debug("ChangeThermostat()", desiredState);
   return queue.add(async () => {
+    let updateSucceeded = false;
+    let commTaskSucceeded = false;
+
     try {
       if (!this.sessionID) {
         this.sessionID = await this._login();
         debug("TCC - Login Succeeded");
         this.thermostats = await this._GetLocationListData(true);
       }
+
       var CommTaskID = await this._UpdateThermostat(desiredState, true);
+      updateSucceeded = true; // Update was sent successfully
+      debug("TCC - Update thermostat succeeded, CommTaskID:", CommTaskID);
+
       await this._GetCommTaskState(CommTaskID);
+      commTaskSucceeded = true; // Server confirmed the change
+      debug("TCC - CommTask confirmed");
+
       var thermostat = await this._GetThermostat(desiredState.ThermostatID);
+      debug("TCC - Retrieved updated thermostat data");
+      tccMessage.validateThermostatData(thermostat, 'ChangeThermostat result');
       return (thermostat);
     } catch (err) {
       console.error("ChangeThermostat Error:", err.message);
+
+      // If update succeeded but we just failed to get fresh data back
+      if (updateSucceeded && commTaskSucceeded) {
+        debug("Update succeeded but failed to retrieve fresh data, using optimistic update");
+        // Return cached data with optimistic update
+        const cached = this.thermostats.hb[desiredState.ThermostatID];
+        if (cached) {
+          // Apply the changes we know were made
+          const optimistic = Object.assign({}, cached);
+          if (desiredState.TargetTemperature !== undefined) {
+            optimistic.TargetTemperature = desiredState.TargetTemperature;
+          }
+          if (desiredState.HeatingThresholdTemperature !== undefined) {
+            optimistic.HeatingThresholdTemperature = desiredState.HeatingThresholdTemperature;
+          }
+          if (desiredState.CoolingThresholdTemperature !== undefined) {
+            optimistic.CoolingThresholdTemperature = desiredState.CoolingThresholdTemperature;
+          }
+          if (desiredState.TargetHeatingCooling !== undefined) {
+            optimistic.TargetHeatingCoolingState = desiredState.TargetHeatingCooling;
+          }
+          // Mark for refresh on next poll
+          debug("Returning optimistic data, will refresh on next poll");
+          return optimistic;
+        }
+      }
+
       this.sessionID = null;
       throw err;
     }

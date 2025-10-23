@@ -38,6 +38,7 @@ class TccPlatform {
     this.thermostats = null;
     this.outsideSensorsCreated = false;
     this.pollInterval = null;
+    this.verificationPollTimeout = null; // For smart polling after changes
     // Use WeakMap to store ChangeThermostat instances (won't be serialized)
     this.changeThermostatMap = new WeakMap();
 
@@ -57,6 +58,10 @@ class TccPlatform {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
     }
+    if (this.verificationPollTimeout) {
+      clearTimeout(this.verificationPollTimeout);
+      this.verificationPollTimeout = null;
+    }
   }
 
   getChangeThermostat(accessory) {
@@ -68,6 +73,22 @@ class TccPlatform {
       debug("Created new ChangeThermostat instance for", accessory.displayName);
     }
     return changeThermostat;
+  }
+
+  scheduleVerificationPoll(delay = 30000) {
+    // Clear any existing verification poll
+    if (this.verificationPollTimeout) {
+      clearTimeout(this.verificationPollTimeout);
+    }
+
+    debug(`Scheduling verification poll in ${delay/1000} seconds`);
+    this.verificationPollTimeout = setTimeout(() => {
+      debug("Running verification poll after temperature change");
+      this.pollDevices().catch(err => {
+        this.log.error("Verification poll error:", err.message);
+      });
+      this.verificationPollTimeout = null;
+    }, delay);
   }
 
   didFinishLaunching() {
@@ -658,6 +679,9 @@ class ChangeThermostat {
                 TargetHeatingCoolingState: thermostat.TargetHeatingCoolingState
               }));
               this.platform.updateStatus(this.accessory, thermostat);
+
+              // Schedule verification poll 30 seconds after change
+              this.platform.scheduleVerificationPoll(30000);
             }
 
             for (const deferral of this.deferrals) {
