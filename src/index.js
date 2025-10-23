@@ -598,8 +598,9 @@ class ChangeThermostat {
     this.ThermostatID = accessory.context.ThermostatID;
     this.waitTimeUpdate = 100; // wait 100ms before processing change
     this.thermostats = thermostatsInstance;
-    this.platform = platform;
-    this.accessory = accessory;
+    // Store displayName instead of references to avoid circular dependency
+    this.accessoryDisplayName = accessory.displayName;
+    this.platformGetter = () => platform; // Use getter function instead of direct reference
   }
 
   put(state) {
@@ -628,15 +629,20 @@ class ChangeThermostat {
 
           this.thermostats.ChangeThermostat(this.desiredState).then((thermostat) => {
             // Update the accessory with the new thermostat data immediately
-            if (this.platform && this.accessory && thermostat) {
-              debug("ChangeThermostat success - updating accessory with:", JSON.stringify({
-                Name: thermostat.Name,
-                TargetTemperature: thermostat.TargetTemperature,
-                HeatingThresholdTemperature: thermostat.HeatingThresholdTemperature,
-                CoolingThresholdTemperature: thermostat.CoolingThresholdTemperature,
-                TargetHeatingCoolingState: thermostat.TargetHeatingCoolingState
-              }));
-              this.platform.updateStatus(this.accessory, thermostat);
+            const platform = this.platformGetter();
+            if (platform && thermostat) {
+              // Find the accessory by display name
+              const accessory = platform.myAccessories.find(acc => acc.displayName === this.accessoryDisplayName);
+              if (accessory) {
+                debug("ChangeThermostat success - updating accessory with:", JSON.stringify({
+                  Name: thermostat.Name,
+                  TargetTemperature: thermostat.TargetTemperature,
+                  HeatingThresholdTemperature: thermostat.HeatingThresholdTemperature,
+                  CoolingThresholdTemperature: thermostat.CoolingThresholdTemperature,
+                  TargetHeatingCoolingState: thermostat.TargetHeatingCoolingState
+                }));
+                platform.updateStatus(accessory, thermostat);
+              }
             }
 
             for (const deferral of this.deferrals) {
