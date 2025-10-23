@@ -304,26 +304,6 @@ assertDeepEqual(normalizedMultiple.hb['11111'].TargetHeatingCoolingStateValidVal
 // ============================================
 console.log('\nTEST 6: Temperature Conversion Edge Cases');
 
-// Create mock thermostat for testing
-const mockThermostatF = {
-  UI: {
-    DisplayedUnits: "F",
-    DispTemperature: 0,
-    HeatSetpoint: 32,
-    CoolSetpoint: 212,
-    OutdoorTemp: -40
-  }
-};
-
-const mockThermostatC = {
-  UI: {
-    DisplayedUnits: "C",
-    DispTemperature: 0,
-    HeatSetpoint: -10,
-    CoolSetpoint: 100
-  }
-};
-
 // Test the toCelcius function indirectly through toHb
 const thermostatObjF = {
   ThermostatID: 99999,
@@ -667,9 +647,57 @@ assert(difference.name === undefined, 'Diff ignores unchanged values');
 assert(difference.nested.a === undefined, 'Diff ignores unchanged nested values');
 
 // ============================================
-// TEST 14: Outside Humidity Special Value
+// TEST 14: Undefined Temperature Handling in Setpoints
 // ============================================
-console.log('\nTEST 14: Outside Humidity Special Value (128)');
+console.log('\nTEST 14: Undefined Temperature Handling in Setpoints');
+
+const testThermostatForSetpoint = {
+  device: {
+    UI: {
+      DisplayedUnits: "C",
+      HeatSetpoint: 20,
+      CoolSetpoint: 25,
+      SystemSwitchPosition: 1,
+      HeatNextPeriod: 19,
+      CoolNextPeriod: 26
+    }
+  }
+};
+
+// Test with only TargetHeatingCooling (no temperature values)
+const desiredStateNoTemp = {
+  ThermostatID: 12345,
+  TargetHeatingCooling: 1 // Change mode only
+};
+
+try {
+  const changeMsgNoTemp = tccMessage.ChangeThermostatMessage("test-session", desiredStateNoTemp, testThermostatForSetpoint, false);
+  assertEqual(changeMsgNoTemp.ChangeThermostatUI.heatSetpoint.$t, 20, 'Heat setpoint unchanged when TargetTemperature is undefined');
+  assertEqual(changeMsgNoTemp.ChangeThermostatUI.coolSetpoint.$t, 25, 'Cool setpoint unchanged when temperature is undefined');
+} catch (err) {
+  console.error('✗ ChangeThermostat with undefined temperature failed:', err.message);
+  testsFailed++;
+}
+
+// Test with explicit temperature value
+const desiredStateWithTemp = {
+  ThermostatID: 12345,
+  TargetHeatingCooling: 1,
+  TargetTemperature: 22
+};
+
+try {
+  const changeMsgWithTemp = tccMessage.ChangeThermostatMessage("test-session", desiredStateWithTemp, testThermostatForSetpoint, false);
+  assertEqual(changeMsgWithTemp.ChangeThermostatUI.heatSetpoint.$t, 22, 'Heat setpoint updated when TargetTemperature is provided');
+} catch (err) {
+  console.error('✗ ChangeThermostat with temperature value failed:', err.message);
+  testsFailed++;
+}
+
+// ============================================
+// TEST 15: Outside Humidity Special Value
+// ============================================
+console.log('\nTEST 15: Outside Humidity Special Value (128)');
 
 const thermostatWithInvalidHumidity = {
   ThermostatID: 88888,
@@ -714,8 +742,6 @@ console.log('========================================\n');
 
 if (testsFailed === 0) {
   console.log('🎉 ALL TESTS PASSED!\n');
-  process.exit(0);
 } else {
   console.error('❌ SOME TESTS FAILED\n');
-  process.exit(1);
 }

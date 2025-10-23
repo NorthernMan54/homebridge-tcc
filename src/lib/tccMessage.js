@@ -206,6 +206,9 @@ function toCelcius(value, thermostat) {
 }
 
 function toThermostat(value, thermostat) {
+  if (value === undefined || value === null) {
+    return value;
+  }
   if (!thermostat || !thermostat.device || !thermostat.device.UI) {
     return value;
   }
@@ -321,11 +324,13 @@ function systemSwitch(desiredState, thermostat) {
 
 function heatSetpoint(desiredState, thermostat) {
   let response = thermostat.device.UI.HeatSetpoint;
-  if (desiredState.TargetTemperature || desiredState.HeatingThresholdTemperature) {
+  if (desiredState.TargetTemperature !== undefined || desiredState.HeatingThresholdTemperature !== undefined) {
     switch (thermostat.device.UI.SystemSwitchPosition) {
       case 0: // TCC Emergency Heat
       case 1: // TCC Heat
-        response = toThermostat(desiredState.TargetTemperature, thermostat);
+        if (desiredState.TargetTemperature !== undefined) {
+          response = toThermostat(desiredState.TargetTemperature, thermostat);
+        }
         break;
       case 2: // TCC Off
         break;
@@ -333,7 +338,9 @@ function heatSetpoint(desiredState, thermostat) {
         break;
       case 4: // TCC Auto heat
       case 5: // TCC Auto cool
-        response = toThermostat(desiredState.HeatingThresholdTemperature, thermostat);
+        if (desiredState.HeatingThresholdTemperature !== undefined) {
+          response = toThermostat(desiredState.HeatingThresholdTemperature, thermostat);
+        }
         break;
     }
   }
@@ -343,21 +350,23 @@ function heatSetpoint(desiredState, thermostat) {
 function coolSetpoint(desiredState, thermostat) {
   let response = thermostat.device.UI.CoolSetpoint;
   // debug("coolSetpoint", getThermostat(desiredState.ThermostatID).UI, response);
-  if (desiredState.TargetTemperature || desiredState.CoolingThresholdTemperature) {
+  if (desiredState.TargetTemperature !== undefined || desiredState.CoolingThresholdTemperature !== undefined) {
     switch (thermostat.device.UI.SystemSwitchPosition) {
       case 1: // TCC Heat
       case 2: // TCC Off
         break;
       case 3: // TCC Cool
-        if (desiredState.TargetTemperature) {
+        if (desiredState.TargetTemperature !== undefined) {
           response = toThermostat(desiredState.TargetTemperature, thermostat);
-        } else if (desiredState.CoolingThresholdTemperature) {
+        } else if (desiredState.CoolingThresholdTemperature !== undefined) {
           response = toThermostat(desiredState.CoolingThresholdTemperature, thermostat);
         }
         break;
       case 4: // TCC Auto heat
       case 5: // TCC Auto cool
-        response = toThermostat(desiredState.CoolingThresholdTemperature, thermostat);
+        if (desiredState.CoolingThresholdTemperature !== undefined) {
+          response = toThermostat(desiredState.CoolingThresholdTemperature, thermostat);
+        }
         break;
     }
   }
