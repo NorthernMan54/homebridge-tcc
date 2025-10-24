@@ -9,7 +9,6 @@ const tccMessage = require('../src/lib/tccMessage.js');
 describe('Cache Preservation Tests', () => {
 
   let mockTcc;
-  let mockThermostats;
 
   beforeEach(() => {
     // Create a fresh TCC instance for each test

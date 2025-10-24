@@ -425,6 +425,14 @@ class TccPlatform {
       targetCharacteristic.updateValue(normalizedTarget);
       service.getCharacteristic(Characteristic.CurrentTemperature)
         .updateValue(device.CurrentTemperature);
+      const humidityChar = service.getCharacteristic(Characteristic.CurrentRelativeHumidity);
+      if (humidityChar) {
+        if (device.InsideHumidity === 128 || device.InsideHumidity === undefined || device.InsideHumidity === null) {
+          humidityChar.updateValue(null);
+        } else {
+          humidityChar.updateValue(device.InsideHumidity);
+        }
+      }
       service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
         .updateValue(device.CurrentHeatingCoolingState);
       service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
@@ -638,6 +646,10 @@ class TccAccessory {
         .on('get', getCurrentTemperature.bind(this.accessory));
 
       thermostatService
+        .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+        .on('get', getCurrentRelativeHumidity.bind(this.accessory));
+
+      thermostatService
         .getCharacteristic(Characteristic.TargetTemperature)
         .setProps({
           minValue: parseFloat(device.TargetTemperatureHeatMinValue),
@@ -705,6 +717,8 @@ class TccAccessory {
         maxValue: parseFloat(device.TargetTemperatureCoolMaxValue),
         minStep: temperatureStep
       });
+      thermostatService.getCharacteristic(Characteristic.CurrentRelativeHumidity)
+        .on('get', getCurrentRelativeHumidity.bind(this.accessory));
       if (device.device.UI.CanSetSwitchAuto) {
         const coolingChar = thermostatService.getCharacteristic(Characteristic.CoolingThresholdTemperature);
         if (coolingChar) {
@@ -866,6 +880,17 @@ function getCurrentTemperature(callback) {
   this.platform.refreshAccessoryState(this).then((device) => {
     const value = device.CurrentTemperature;
     callback(null, value === undefined ? null : value);
+  }).catch((error) => handleRefreshError(callback, error));
+}
+
+function getCurrentRelativeHumidity(callback) {
+  this.platform.refreshAccessoryState(this).then((device) => {
+    const value = device.InsideHumidity;
+    if (value === undefined || value === null || value === 128) {
+      callback(null, null);
+    } else {
+      callback(null, value);
+    }
   }).catch((error) => handleRefreshError(callback, error));
 }
 

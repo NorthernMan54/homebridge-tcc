@@ -14,6 +14,7 @@ A feature-rich Homebridge plugin for **North America Honeywell Total Connect Com
 - ✅ **Auto-Discovery** - Automatically discovers all thermostats on your TCC account
 - ✅ **Multi-Thermostat Support** - Manage multiple zones/thermostats simultaneously
 - ✅ **Temperature Control** - Set target temperature, heating/cooling thresholds
+- ✅ **Humidity Monitoring** - View live indoor humidity directly on each thermostat
 - ✅ **Mode Switching** - Off, Heat, Cool, and Auto modes
 - ✅ **Emergency Heat Support** - Automatically remembers and uses your emergency heat preference
 - ✅ **Real-time Updates** - See current temperature, humidity, and operating state
@@ -21,6 +22,7 @@ A feature-rich Homebridge plugin for **North America Honeywell Total Connect Com
 ### Advanced Features
 - 📊 **Historical Data** - Temperature and humidity history for Eve app and other compatible apps (via FakeGato)
 - 🌡️ **Separate Sensors** - Optional independent temperature/humidity sensors for automations
+- 💧 **Thermostat Humidity Characteristic** - HomeKit exposes indoor humidity even when extra sensors are disabled
 - ⚡ **Smart Polling** - Optimized refresh with background polling for faster updates
 - 🔄 **Automatic Recovery** - Handles network issues and API errors gracefully
 - 🎯 **Precise Temperature** - Intelligent rounding for both Celsius and Fahrenheit units
@@ -509,7 +511,7 @@ Contributions are welcome! Please:
 
 ## Testing
 
-This plugin includes a comprehensive test suite with 48 tests covering all functionality, especially emergency heat mode, mode transitions, and persistence across restarts.
+This plugin includes a comprehensive test suite with 50 tests covering all functionality, especially emergency heat mode, humidity reporting, mode transitions, and persistence across restarts.
 
 ### Running Tests
 
@@ -551,7 +553,7 @@ The test suite includes:
 
 ```
 Test Suites: 2 passed, 2 total
-Tests:       48 passed, 48 total
+Tests:       50 passed, 50 total
 Time:        ~0.5 seconds
 ```
 
@@ -559,6 +561,7 @@ Time:        ~0.5 seconds
 
 - `__tests__/emergencyHeat.test.js` - Emergency heat functionality (33 tests)
 - `__tests__/cachePreservation.test.js` - Cache preservation logic (15 tests)
+- `__tests__/humidityMapping.test.js` - Ensures humidity values reach HomeKit accessories
 
 For detailed test documentation, see [TESTING.md](TESTING.md).
 
