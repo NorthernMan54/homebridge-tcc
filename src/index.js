@@ -47,7 +47,6 @@ class TccPlatform {
     this.verificationPollTimeout = null; // For smart polling after changes
     // Use WeakMap to store ChangeThermostat instances (won't be serialized)
     this.changeThermostatMap = new WeakMap();
-    this.fanManualModeMap = new WeakMap();
     this.refreshInFlight = null;
     this.backgroundRefresh = Object.prototype.hasOwnProperty.call(config, 'backgroundRefresh') ? config.backgroundRefresh : 180;
     if (this.backgroundRefresh === false) {
@@ -388,9 +387,6 @@ class TccPlatform {
       accessory.context.displayedUnits = device.device.UI.DisplayedUnits;
       accessory.context.temperatureStep = this.getTemperatureStepForDevice(device);
     }
-    if (device.Fan || (device.device && device.device.Fan)) {
-      accessory.context.fanCapabilities = device.Fan || device.device.Fan;
-    }
     // Store the last physical heat mode preference (emergency heat vs regular heat)
     if (device.LastPhysicalHeatMode !== undefined) {
       accessory.context.lastPhysicalHeatMode = device.LastPhysicalHeatMode;
@@ -420,28 +416,6 @@ class TccPlatform {
       const OutsideHumidity = accessory.getService("Outside Humidity");
       OutsideHumidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
         .updateValue(device.OutsideHumidity);
-    }
-
-    const fanData = device.Fan || (device.device && device.device.Fan);
-    if (accessory.fanService && fanData) {
-      const activeValue = fanData.Position === 'Auto' ? Characteristic.Active.INACTIVE : Characteristic.Active.ACTIVE;
-      accessory.fanService.updateCharacteristic(Characteristic.Active, activeValue);
-
-      if (accessory.supportsFanTargetState) {
-        const targetValue = fanData.Position === 'Auto' ? Characteristic.TargetFanState.AUTO : Characteristic.TargetFanState.MANUAL;
-        accessory.fanService.updateCharacteristic(Characteristic.TargetFanState, targetValue);
-      }
-
-      const currentState = fanData.IsFanRunning ? Characteristic.CurrentFanState.BLOWING_AIR : Characteristic.CurrentFanState.IDLE;
-      accessory.fanService.updateCharacteristic(Characteristic.CurrentFanState, currentState);
-
-      if (fanData.Position !== 'Auto' && fanData.Position) {
-        accessory.context.preferredFanManualMode = fanData.Position;
-      }
-    } else if (accessory.fanService && !fanData) {
-      accessory.removeService(accessory.fanService);
-      accessory.fanService = null;
-      accessory.supportsFanTargetState = false;
     }
 
     // fakegato for outside sensor
@@ -514,19 +488,6 @@ class TccPlatform {
     }
   }
 
-  changeFanMode(accessory, fanMode) {
-    return this.thermostats.ChangeFanMode({
-      ThermostatID: accessory.context.ThermostatID,
-      FanMode: fanMode
-    }).then((thermostat) => {
-      if (thermostat) {
-        this.updateStatus(accessory, thermostat);
-      }
-      this.scheduleVerificationPoll(30000);
-      return thermostat;
-    });
-  }
-
   startBackgroundRefresh() {
     if (!this.backgroundRefresh || this.backgroundRefresh <= 0) {
       this.logger.debug('Background refresh disabled');
@@ -594,46 +555,6 @@ class TccPlatform {
   getAccessoryByName(accessoryName) {
     return this.myAccessories.find(accessory => accessory.context.name === accessoryName);
   }
-
-  ensureFanService(fanCapabilities) {
-    if (!fanCapabilities || !fanCapabilities.CanControl) {
-      if (this.fanService) {
-        this.accessory.removeService(this.fanService);
-        this.fanService = null;
-      }
-      return;
-    }
-
-    const manualModes = [];
-    if (fanCapabilities.CanSetOn) {
-      manualModes.push('On');
-    }
-    if (fanCapabilities.CanSetCirculate) {
-      manualModes.push('Circulate');
-    }
-    this.accessory.context.preferredFanManualMode = manualModes[0] || 'On';
-    this.accessory.context.fanCapabilities = fanCapabilities;
-    this.supportsFanTargetState = fanCapabilities.CanSetAuto && manualModes.length > 0;
-
-    if (!this.fanService) {
-      this.fanService = this.accessory.getService(Service.Fanv2) || this.accessory.addService(Service.Fanv2, `${this.name} Fan`);
-      this.fanService
-        .getCharacteristic(Characteristic.Active)
-        .on('set', setFanActive.bind(this.accessory));
-
-      if (this.supportsFanTargetState) {
-        this.fanService
-          .getCharacteristic(Characteristic.TargetFanState)
-          .on('set', setFanTargetState.bind(this.accessory));
-      }
-
-      this.fanService
-        .getCharacteristic(Characteristic.CurrentFanState);
-    }
-
-    this.accessory.fanService = this.fanService;
-    this.accessory.supportsFanTargetState = this.supportsFanTargetState;
-  }
 }
 
 class TccAccessory {
@@ -651,7 +572,6 @@ class TccAccessory {
     const temperatureStep = platform.getTemperatureStepForDevice(device);
     let createInsideHumiditySensors = false;
     let createInsideTemperatureSensors = false;
-    const fanCapabilities = device && device.device ? device.device.Fan : null;
 
     // need to get config for this thermostat id
     switch (sensors) {
@@ -693,7 +613,6 @@ class TccAccessory {
       this.accessory.context.logEventCounter = 9; // Update fakegato on startup
       this.accessory.context.temperatureStep = temperatureStep;
       this.accessory.context.displayedUnits = displayedUnits;
-      this.accessory.context.fanCapabilities = fanCapabilities;
       this.accessory.platform = platform;
 
       this.accessory.getService(Service.AccessoryInformation)
@@ -726,8 +645,6 @@ class TccAccessory {
           .getCharacteristic(Characteristic.CurrentRelativeHumidity)
           .on('get', getSensorHumidity.bind(this.accessory, 'InsideHumidity'));
       }
-
-      this.ensureFanService(fanCapabilities);
 
       //       .setProps({validValues: hbValues.TargetHeatingCoolingStateValidValues})
       const thermostatService = this.accessory.getService(Service.Thermostat);
@@ -812,7 +729,6 @@ class TccAccessory {
       this.accessory.log = this.logger.info.bind(this.logger);
       this.accessory.context.temperatureStep = temperatureStep;
       this.accessory.context.displayedUnits = displayedUnits;
-      this.accessory.context.fanCapabilities = fanCapabilities;
       this.accessory.platform = platform;
       this.logger.debug('Heating threshold props: %o', this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.HeatingThresholdTemperature).props);
       this.logger.debug('Cooling threshold props: %o', this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.CoolingThresholdTemperature).props);
@@ -866,7 +782,6 @@ class TccAccessory {
       } else if (!createInsideHumiditySensors && this.accessory.getService(this.name + " Humidity")) {
         this.accessory.removeService(this.accessory.getService(this.name + " Humidity"));
       }
-      this.ensureFanService(fanCapabilities);
       return this.accessory;
     }
   }
@@ -1046,40 +961,6 @@ function getSensorHumidity(property, callback) {
     const value = device[property];
     callback(null, value === undefined ? null : value);
   }).catch((error) => handleRefreshError(callback, error));
-}
-
-function resolveManualFanMode(accessory) {
-  const capabilities = accessory.context.fanCapabilities || {};
-  const preferred = accessory.context.preferredFanManualMode;
-  const manualModes = [];
-  if (capabilities.CanSetOn) {
-    manualModes.push('On');
-  }
-  if (capabilities.CanSetCirculate) {
-    manualModes.push('Circulate');
-  }
-  if (preferred && manualModes.includes(preferred)) {
-    return preferred;
-  }
-  return manualModes[0] || 'On';
-}
-
-function setFanActive(value, callback) {
-  const targetMode = value === Characteristic.Active.ACTIVE
-    ? resolveManualFanMode(this)
-    : 'Auto';
-  this.platform.changeFanMode(this, targetMode).then(() => {
-    callback(null);
-  }).catch((error) => callback(error));
-}
-
-function setFanTargetState(value, callback) {
-  const targetMode = value === Characteristic.TargetFanState.AUTO
-    ? 'Auto'
-    : resolveManualFanMode(this);
-  this.platform.changeFanMode(this, targetMode).then(() => {
-    callback(null);
-  }).catch((error) => callback(error));
 }
 
 function setTargetTemperature(value, callback) {

@@ -127,32 +127,6 @@ tcc.prototype.pollThermostat = function() {
   });
 };
 
-// Public interface to change fan mode
-
-tcc.prototype.ChangeFanMode = function(desiredState) {
-  return queue.add(async () => {
-    try {
-      if (!this.sessionID) {
-        this.sessionID = await this._login();
-        this.logDebug("TCC - Login Succeeded");
-        this.thermostats = await this._GetLocationListData(true);
-      }
-
-      await this._UpdateFanMode(desiredState);
-      this.logDebug("TCC - Fan mode update sent");
-
-      const thermostat = await this._GetThermostat(desiredState.ThermostatID);
-      this.logDebug("TCC - Retrieved updated thermostat data after fan change");
-      tccMessage.validateThermostatData(thermostat, 'ChangeFanMode result');
-      return thermostat;
-    } catch (err) {
-      this.logError('ChangeFanMode Error: %s', err.message);
-      this.sessionID = null;
-      throw err;
-    }
-  });
-};
-
 // Public interface to login and update specific thermostat settings
 
 tcc.prototype.ChangeThermostat = function(desiredState) {
@@ -300,48 +274,6 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
         this.logDebug("_UpdateThermostat message", xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds))));
         reject(err);
         this.sessionID = null;
-      }
-    })();
-  });
-};
-
-// private interface to update fan mode
-
-tcc.prototype._UpdateFanMode = function(desiredState) {
-  return new Promise((resolve, reject) => {
-    (async () => {
-      try {
-        if (!this.sessionID) {
-          this.sessionID = await this._login();
-        }
-        HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/ChangeThermostatFanMode';
-        const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeFanModeMessage(this.sessionID, desiredState)));
-        this.logDebug("_UpdateFanMode SOAP Message", message);
-        const { response } = await soapRequest({
-          url: URL,
-          headers: HEADER,
-          xml: message,
-          timeout: this.timeout,
-          withCredentials: true
-        });
-        if (response.statusCode === 200) {
-          const parsedResponse = xmlParser.parse(response.body);
-          const result = parsedResponse["soap:Envelope"]["soap:Body"].ChangeThermostatFanModeResponse.ChangeThermostatFanModeResult;
-          if (result.Result === "Success") {
-            this.logDebug("TCC - Fan mode update succeeded");
-            resolve(result);
-          } else {
-            this.sessionID = null;
-            reject(new Error("ERROR: _UpdateFanMode (200) " + result.Result));
-          }
-        } else {
-          this.logDebug("ERROR: _UpdateFanMode %s", response, message);
-          reject(new Error("ERROR: _UpdateFanMode (!200)"));
-        }
-      } catch (err) {
-        this.logDebug("_UpdateFanMode message", xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeFanModeMessage(this.sessionID, desiredState))));
-        this.sessionID = null;
-        reject(err);
       }
     })();
   });

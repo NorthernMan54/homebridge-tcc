@@ -7,7 +7,6 @@ module.exports = {
   ChangeThermostatMessage: ChangeThermostatMessage,
   GetCommTaskStateMessage: GetCommTaskStateMessage,
   GetThermostatMessage: GetThermostatMessage,
-  ChangeFanModeMessage: ChangeFanModeMessage,
   normalizeToHb: normalizeToHb,
   toHb: toHb,
   toCelcius: toCelcius,
@@ -160,25 +159,6 @@ function GetThermostatMessage(sessionID, ThermostatID) {
   });
 }
 
-function ChangeFanModeMessage(sessionID, desiredState) {
-  if (!desiredState || desiredState.FanMode === undefined || desiredState.ThermostatID === undefined) {
-    throw new Error("Invalid fan change request");
-  }
-  return ({
-    ChangeThermostatFanMode: {
-      sessionID: {
-        $t: sessionID
-      },
-      thermostatID: {
-        $t: desiredState.ThermostatID
-      },
-      fanMode: {
-        $t: desiredState.FanMode
-      }
-    }
-  });
-}
-
 function normalizeToHb(devices) {
   devices.hb = {};
   const locationInfos = Array.isArray(devices.LocationInfo)
@@ -219,15 +199,6 @@ function toHb(thermostat) {
   response.TargetTemperatureCoolMaxValue = toCelcius(thermostat.UI.CoolUpperSetptLimit, thermostat);
   response.OutsideHumidity = thermostat.UI.OutdoorHumidity;
   response.InsideHumidity = thermostat.UI.IndoorHumidity;
-  if (thermostat.Fan) {
-    response.Fan = {
-      Position: thermostat.Fan.Position,
-      CanSetAuto: thermostat.Fan.CanSetAuto,
-      CanSetOn: thermostat.Fan.CanSetOn,
-      CanSetCirculate: thermostat.Fan.CanSetCirculate,
-      IsFanRunning: thermostat.Fan.IsFanRunning
-    };
-  }
   response.device = thermostat;
   // Track the last physical heat mode (0=emergency heat, 1=regular heat)
   // This is used when setting heat mode from HomeKit to maintain user's physical thermostat preference
@@ -252,10 +223,7 @@ function toThermostat(value, thermostat) {
   if (!thermostat || !thermostat.device || !thermostat.device.UI) {
     return value;
   }
-  if (thermostat.device.UI.DisplayedUnits === "C") {
-    return value;
-  }
-  return ((value * 9 / 5) + 32).toFixed(0);
+  return (thermostat.device.UI.DisplayedUnits === "C" ? value : ((value * 9 / 5) + 32).toFixed(0));
 }
 
 function currentState(thermostat) {

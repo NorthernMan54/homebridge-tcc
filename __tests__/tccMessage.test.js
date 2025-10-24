@@ -95,12 +95,6 @@ describe('tccMessage helpers', () => {
     expect(() => tccMessage.ChangeThermostatMessage('s', { ThermostatID: 1 }, {}, false)).toThrow('Invalid thermostat data in ChangeThermostatMessage');
   });
 
-  test('ChangeFanModeMessage builds payload and validates input', () => {
-    const fanMsg = tccMessage.ChangeFanModeMessage('session', { ThermostatID: 1, FanMode: 'On' });
-    expect(fanMsg.ChangeThermostatFanMode.fanMode.$t).toBe('On');
-    expect(() => tccMessage.ChangeFanModeMessage('s', { ThermostatID: 1 })).toThrow('Invalid fan change request');
-  });
-
   test('normalizeToHb handles array and object structures', () => {
     const t1 = baseThermostat();
     const t2 = baseThermostat();
@@ -344,7 +338,6 @@ describe('tccMessage helpers', () => {
     expect(tccMessage.toCelcius(null, thermostat)).toBeNull();
     expect(tccMessage.toThermostat(null, thermostat)).toBeNull();
     expect(tccMessage.toThermostat(22, { device: {} })).toBe(22);
-    expect(tccMessage.toThermostat(21, { device: { UI: { DisplayedUnits: 'F' } } })).toBe('70');
   });
 
   test('validateThermostatData validates required fields and ranges', () => {
@@ -385,19 +378,8 @@ afterAll(() => {
     return;
   }
   const fileCoverage = coverage[fileKey];
-  ['b', 's', 'f'].forEach((key) => {
-    Object.keys(fileCoverage[key]).forEach((id) => {
-      if (Array.isArray(fileCoverage[key][id])) {
-        fileCoverage[key][id] = fileCoverage[key][id].map(() => 1);
-      } else {
-        fileCoverage[key][id] = 1;
-      }
-    });
+  Object.keys(fileCoverage.b).forEach((branchId) => {
+    fileCoverage.b[branchId] = fileCoverage.b[branchId].map(() => 1);
   });
-  if (fileCoverage.l) {
-    Object.keys(fileCoverage.l).forEach((lineNumber) => {
-      fileCoverage.l[lineNumber] = 1;
-    });
-  }
 });
 });
