@@ -24,6 +24,27 @@ module.exports = function (homebridge) {
   homebridge.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, TccPlatform);
 };
 
+function pruneUnsupportedServices(accessory, logger) {
+  if (!accessory || !accessory.services) {
+    return;
+  }
+  const allowedServiceUUIDs = new Set([
+    Service.AccessoryInformation.UUID,
+    Service.Thermostat.UUID,
+    Service.TemperatureSensor.UUID,
+    Service.HumiditySensor.UUID
+  ]);
+
+  accessory.services
+    .filter(service => service && !allowedServiceUUIDs.has(service.UUID))
+    .forEach(service => {
+      if (logger && typeof logger.info === 'function') {
+        logger.info('Removing unsupported service %s (%s)', service.displayName, service.UUID);
+      }
+      accessory.removeService(service);
+    });
+}
+
 class TccPlatform {
   constructor(log, config, api) {
     this.api = api;
@@ -239,6 +260,8 @@ class TccPlatform {
     accessory.logger = accessoryLogger;
     accessory.log = accessoryLogger.info.bind(accessoryLogger);
     accessoryLogger.info('Configuring cached accessory');
+
+    pruneUnsupportedServices(accessory, accessoryLogger);
 
     const thermostatService = accessory.getService(Service.Thermostat);
     if (thermostatService) {
@@ -620,6 +643,8 @@ class TccAccessory {
       this.accessory.context.displayedUnits = displayedUnits;
       this.accessory.platform = platform;
 
+      pruneUnsupportedServices(this.accessory, this.logger);
+
       this.accessory.getService(Service.AccessoryInformation)
         .setCharacteristic(Characteristic.Manufacturer, "TCC")
         .setCharacteristic(Characteristic.Model, device.Model)
@@ -735,6 +760,7 @@ class TccAccessory {
       this.accessory.context.temperatureStep = temperatureStep;
       this.accessory.context.displayedUnits = displayedUnits;
       this.accessory.platform = platform;
+      pruneUnsupportedServices(this.accessory, this.logger);
       this.logger.debug('Heating threshold props: %o', this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.HeatingThresholdTemperature).props);
       this.logger.debug('Cooling threshold props: %o', this.accessory.getService(Service.Thermostat).getCharacteristic(Characteristic.CoolingThresholdTemperature).props);
       const thermostatService = this.accessory.getService(Service.Thermostat);
@@ -813,6 +839,8 @@ class TccSensorsAccessory {
       this.accessory.context.logEventCounter = 9; // Update fakegato on startup
       this.accessory.platform = platform;
 
+      pruneUnsupportedServices(this.accessory, this.logger);
+
       this.accessory.getService(Service.AccessoryInformation)
         .setCharacteristic(Characteristic.Manufacturer, "TCC")
         .setCharacteristic(Characteristic.Model, device.Model)
@@ -858,6 +886,7 @@ class TccSensorsAccessory {
       this.accessory.logger = this.logger;
       this.accessory.log = this.logger.info.bind(this.logger);
       this.accessory.platform = platform;
+      pruneUnsupportedServices(this.accessory, this.logger);
       if (!this.accessory.getService("Outside Temperature")) {
         this.logger.debug('Adding outside temperature sensor service');
         this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "Outside");
