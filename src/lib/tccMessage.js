@@ -66,6 +66,9 @@ function ChangeThermostatMessage(sessionID, desiredState, thermostat, usePermane
   if (!thermostat || !thermostat.device || !thermostat.device.UI) {
     throw new Error("Invalid thermostat data in ChangeThermostatMessage");
   }
+  // Make a deep copy to avoid modifying the cached thermostat object
+  const thermostatCopy = JSON.parse(JSON.stringify(thermostat));
+
   // debug("ChangeThermostatMessage", desiredState);
   return ({
     ChangeThermostatUI: {
@@ -79,31 +82,31 @@ function ChangeThermostatMessage(sessionID, desiredState, thermostat, usePermane
         $t: 1
       },
       systemSwitch: {
-        $t: systemSwitch(desiredState, thermostat)
+        $t: systemSwitch(desiredState, thermostatCopy)
       },
       changeHeatSetpoint: {
         $t: 1
       },
       heatSetpoint: {
-        $t: heatSetpoint(desiredState, thermostat)
+        $t: heatSetpoint(desiredState, thermostatCopy)
       },
       changeCoolSetpoint: {
         $t: 1
       },
       coolSetpoint: {
-        $t: coolSetpoint(desiredState, thermostat)
+        $t: coolSetpoint(desiredState, thermostatCopy)
       },
       changeHeatNextPeriod: {
         $t: 1
       },
       heatNextPeriod: {
-        $t: thermostat.device.UI.HeatNextPeriod
+        $t: thermostatCopy.device.UI.HeatNextPeriod
       },
       changeCoolNextPeriod: {
         $t: 1
       },
       coolNextPeriod: {
-        $t: thermostat.device.UI.CoolNextPeriod
+        $t: thermostatCopy.device.UI.CoolNextPeriod
       },
       changeStatusHeat: {
         $t: 1
