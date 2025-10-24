@@ -369,6 +369,10 @@ class TccPlatform {
       accessory.context.displayedUnits = device.device.UI.DisplayedUnits;
       accessory.context.temperatureStep = this.getTemperatureStepForDevice(device);
     }
+    // Store the last physical heat mode preference (emergency heat vs regular heat)
+    if (device.LastPhysicalHeatMode !== undefined) {
+      accessory.context.lastPhysicalHeatMode = device.LastPhysicalHeatMode;
+    }
     accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Name)
       .updateValue(device.Name);
     accessory.getService(Service.AccessoryInformation).getCharacteristic(Characteristic.Model)

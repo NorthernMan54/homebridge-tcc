@@ -195,6 +195,11 @@ function toHb(thermostat) {
   response.OutsideHumidity = thermostat.UI.OutdoorHumidity;
   response.InsideHumidity = thermostat.UI.IndoorHumidity;
   response.device = thermostat;
+  // Track the last physical heat mode (0=emergency heat, 1=regular heat)
+  // This is used when setting heat mode from HomeKit to maintain user's physical thermostat preference
+  if (thermostat.UI.SystemSwitchPosition === 0 || thermostat.UI.SystemSwitchPosition === 1) {
+    response.LastPhysicalHeatMode = thermostat.UI.SystemSwitchPosition;
+  }
   return response;
 }
 
@@ -304,7 +309,14 @@ function systemSwitch(desiredState, thermostat) {
       state = 2;
       break;
     case 1: // Heat
-      state = 1;
+      // Use the last physical heat mode preference if available
+      // This allows maintaining emergency heat vs regular heat preference
+      if (thermostat.LastPhysicalHeatMode !== undefined &&
+          (thermostat.LastPhysicalHeatMode === 0 || thermostat.LastPhysicalHeatMode === 1)) {
+        state = thermostat.LastPhysicalHeatMode;
+      } else {
+        state = 1; // Default to regular heat
+      }
       break;
     case 2: // Cool
       state = 3;

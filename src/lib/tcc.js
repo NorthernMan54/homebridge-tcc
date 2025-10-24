@@ -141,6 +141,10 @@ tcc.prototype.ChangeThermostat = function(desiredState) {
           }
           if (desiredState.TargetHeatingCooling !== undefined) {
             optimistic.TargetHeatingCoolingState = desiredState.TargetHeatingCooling;
+            // If setting to heat mode, preserve the heat mode type that was used
+            if (desiredState.TargetHeatingCooling === 1 && cached.LastPhysicalHeatMode !== undefined) {
+              optimistic.LastPhysicalHeatMode = cached.LastPhysicalHeatMode;
+            }
           }
           // Mark for refresh on next poll
           debug("Returning optimistic data, will refresh on next poll");
