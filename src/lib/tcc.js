@@ -82,6 +82,18 @@ tcc.prototype.pollThermostat = function() {
           }
         }
       }
+      // Preserve LastPhysicalHeatMode across updates
+      if (this.thermostats && this.thermostats.hb && current.hb) {
+        for (const id in current.hb) {
+          if (this.thermostats.hb[id] && this.thermostats.hb[id].LastPhysicalHeatMode !== undefined) {
+            // Preserve existing heat mode preference if not updated in current poll
+            if (current.hb[id].LastPhysicalHeatMode === undefined) {
+              current.hb[id].LastPhysicalHeatMode = this.thermostats.hb[id].LastPhysicalHeatMode;
+              debug("Preserved LastPhysicalHeatMode=%s for thermostat %s", current.hb[id].LastPhysicalHeatMode, id);
+            }
+          }
+        }
+      }
       this.thermostats = current;
       return (current);
     } catch (err) {
@@ -302,8 +314,17 @@ tcc.prototype._GetThermostat = async function(ThermostatID) {
     const parsedResponse = xmlParser.parse(response.body);
     const GetThermostatResult = parsedResponse["soap:Envelope"]["soap:Body"].GetThermostatResponse.GetThermostatResult;
     if (GetThermostatResult.Result === "Success") {
-      this.thermostats.hb[ThermostatID.toString()] = tccMessage.toHb(GetThermostatResult.Thermostat);
-      return tccMessage.toHb(GetThermostatResult.Thermostat);
+      const thermostatData = tccMessage.toHb(GetThermostatResult.Thermostat);
+      // Preserve LastPhysicalHeatMode if not set in current update
+      const idString = ThermostatID.toString();
+      if (this.thermostats && this.thermostats.hb && this.thermostats.hb[idString]) {
+        if (thermostatData.LastPhysicalHeatMode === undefined && this.thermostats.hb[idString].LastPhysicalHeatMode !== undefined) {
+          thermostatData.LastPhysicalHeatMode = this.thermostats.hb[idString].LastPhysicalHeatMode;
+          debug("Preserved LastPhysicalHeatMode=%s for thermostat %s", thermostatData.LastPhysicalHeatMode, idString);
+        }
+      }
+      this.thermostats.hb[idString] = thermostatData;
+      return thermostatData;
     } else {
       debug("ERROR: GetThermostat Failed %s", GetThermostatResult.Result, message);
       throw new Error("ERROR: GetThermostat Failed " + GetThermostatResult.Result);

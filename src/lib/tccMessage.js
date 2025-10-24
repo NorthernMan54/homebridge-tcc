@@ -304,6 +304,7 @@ function targetTemperature(thermostat) {
 }
 
 function systemSwitch(desiredState, thermostat) {
+  // var debug = require('debug')('tcc-libMessage');
   let state;
   switch (desiredState.TargetHeatingCooling) {
     case 0: // Off
@@ -315,8 +316,10 @@ function systemSwitch(desiredState, thermostat) {
       if (thermostat.LastPhysicalHeatMode !== undefined &&
           (thermostat.LastPhysicalHeatMode === 0 || thermostat.LastPhysicalHeatMode === 1)) {
         state = thermostat.LastPhysicalHeatMode;
+        // debug("Using LastPhysicalHeatMode=%s for heat command", state);
       } else {
         state = 1; // Default to regular heat
+        // debug("No LastPhysicalHeatMode found, using default regular heat (1)");
       }
       break;
     case 2: // Cool
