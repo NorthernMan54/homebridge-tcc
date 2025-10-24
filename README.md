@@ -512,7 +512,7 @@ Contributions are welcome! Please:
 
 ## Testing
 
-This plugin includes a comprehensive test suite with 50 tests covering all functionality, especially emergency heat mode, humidity reporting, mode transitions, and persistence across restarts.
+This plugin includes a comprehensive test suite with 70 tests covering all functionality, especially emergency heat mode, humidity reporting, mode transitions, logging, and persistence across restarts.
 
 ### Running Tests
 
@@ -554,15 +554,17 @@ The test suite includes:
 
 ```
 Test Suites: 2 passed, 2 total
-Tests:       50 passed, 50 total
+Tests:       70 passed, 70 total
 Time:        ~0.5 seconds
 ```
 
 ### Test Files
 
-- `__tests__/emergencyHeat.test.js` - Emergency heat functionality (33 tests)
-- `__tests__/cachePreservation.test.js` - Cache preservation logic (15 tests)
+- `__tests__/emergencyHeat.test.js` - Emergency heat workflows and persistence
+- `__tests__/cachePreservation.test.js` - Cache preservation logic for poll and refresh flows
 - `__tests__/humidityMapping.test.js` - Ensures humidity values reach HomeKit accessories
+- `__tests__/tccMessage.test.js` - Exhaustive coverage for SOAP message helpers and converters
+- `__tests__/logger.test.js` - Structured logging behaviour and edge cases
 
 For detailed test documentation, see [TESTING.md](TESTING.md).
 
