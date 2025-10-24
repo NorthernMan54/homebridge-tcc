@@ -22,20 +22,20 @@ function pruneUnsupportedServices(accessory, logger, Service) {
 
   const managedList = accessory.context.managedServiceUUIDs || [];
   const managedSet = new Set(managedList);
-  const fallbackAllowed = new Set([
-    Service.Thermostat.UUID,
-    Service.TemperatureSensor.UUID,
-    Service.HumiditySensor.UUID
-  ]);
+  const legacyServiceUUIDs = new Set([
+    Service.Fan && Service.Fan.UUID,
+    Service.Fanv2 && Service.Fanv2.UUID
+  ].filter(Boolean));
 
   accessory.services
     .filter(service => service && service.UUID !== Service.AccessoryInformation.UUID)
     .forEach(service => {
       const isManaged = managedSet.has(service.UUID);
-      const isFallbackAllowed = fallbackAllowed.has(service.UUID);
-      if (!isManaged && !isFallbackAllowed) {
+      const isLegacy = legacyServiceUUIDs.has(service.UUID);
+
+      if (isLegacy && !isManaged) {
         if (logger && typeof logger.info === 'function') {
-          logger.info('Removing unsupported service %s (%s)', service.displayName, service.UUID);
+          logger.info('Removing legacy service %s (%s)', service.displayName, service.UUID);
         }
         accessory.removeService(service);
       }
