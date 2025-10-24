@@ -24,8 +24,9 @@ const xmlBuilder = new XMLBuilder({
 });
 
 let count = 0;
+const queueLogger = debug.extend('queue');
 queue.on('active', () => {
-  debug(`Queue: Working on item #${++count}.  Size: ${queue.size}  Pending: ${queue.pending}`);
+  queueLogger(`Working on item #${++count}. Size: ${queue.size} Pending: ${queue.pending}`);
 });
 
 const URL = 'https://TCCNA.resideo.com/ws/MobileV2.asmx';
@@ -48,7 +49,29 @@ function tcc(options) {
   if (options.debug) {
     debug.enabled = true;
   }
-  debug("Setting up TCC component");
+  this.logger = options.logger ? options.logger.child(['API']) : null;
+  this.logDebug = (...args) => {
+    if (this.logger) {
+      this.logger.debug(...args);
+    } else {
+      debug(...args);
+    }
+  };
+  this.logInfo = (...args) => {
+    if (this.logger) {
+      this.logger.info(...args);
+    } else {
+      console.log(...args);
+    }
+  };
+  this.logError = (...args) => {
+    if (this.logger) {
+      this.logger.error(...args);
+    } else {
+      console.error(...args);
+    }
+  };
+  this.logDebug('Setting up TCC component');
   this._username = options.username;
   this._password = options.password;
   this._refresh = options.refresh;
@@ -66,11 +89,11 @@ tcc.prototype.pollThermostat = function() {
     try {
       if (!this.sessionID) {
         this.sessionID = await this._login();
-        debug("TCC - Login Succeeded");
+        this.logDebug("TCC - Login Succeeded");
       }
       var current = await this._GetLocationListData(true);
       if (this.thermostats.LocationInfo && current.LocationInfo) {
-        debug("pollThermostat - delta", JSON.stringify(tccMessage.diff(this.thermostats, current), null, 2));
+        this.logDebug("pollThermostat - delta", JSON.stringify(tccMessage.diff(this.thermostats, current), null, 2));
       }
       // Validate all thermostats before storing
       if (current.hb) {
@@ -78,7 +101,7 @@ tcc.prototype.pollThermostat = function() {
           try {
             tccMessage.validateThermostatData(current.hb[id], `pollThermostat ID:${id}`);
           } catch (err) {
-            console.error(`Validation failed for thermostat ${id}:`, err.message);
+            this.logError(`Validation failed for thermostat ${id}: %s`, err.message);
           }
         }
       }
@@ -89,7 +112,7 @@ tcc.prototype.pollThermostat = function() {
             // Preserve existing heat mode preference if not updated in current poll
             if (current.hb[id].LastPhysicalHeatMode === undefined) {
               current.hb[id].LastPhysicalHeatMode = this.thermostats.hb[id].LastPhysicalHeatMode;
-              debug("Preserved LastPhysicalHeatMode=%s for thermostat %s", current.hb[id].LastPhysicalHeatMode, id);
+              this.logDebug("Preserved LastPhysicalHeatMode=%s for thermostat %s", current.hb[id].LastPhysicalHeatMode, id);
             }
           }
         }
@@ -97,8 +120,8 @@ tcc.prototype.pollThermostat = function() {
       this.thermostats = current;
       return (current);
     } catch (err) {
-      console.error("pollThermostat Error:", err.message);
-      debug("pollThermostat", err);
+      this.logError('pollThermostat Error: %s', err.message);
+      this.logDebug("pollThermostat", err);
       throw err;
     }
   });
@@ -107,7 +130,7 @@ tcc.prototype.pollThermostat = function() {
 // Public interface to login and update specific thermostat settings
 
 tcc.prototype.ChangeThermostat = function(desiredState) {
-  // debug("ChangeThermostat()", desiredState);
+  // this.logDebug("ChangeThermostat()", desiredState);
   return queue.add(async () => {
     let updateSucceeded = false;
     let commTaskSucceeded = false;
@@ -115,28 +138,28 @@ tcc.prototype.ChangeThermostat = function(desiredState) {
     try {
       if (!this.sessionID) {
         this.sessionID = await this._login();
-        debug("TCC - Login Succeeded");
+        this.logDebug("TCC - Login Succeeded");
         this.thermostats = await this._GetLocationListData(true);
       }
 
       var CommTaskID = await this._UpdateThermostat(desiredState, true);
       updateSucceeded = true; // Update was sent successfully
-      debug("TCC - Update thermostat succeeded, CommTaskID:", CommTaskID);
+      this.logDebug("TCC - Update thermostat succeeded, CommTaskID:", CommTaskID);
 
       await this._GetCommTaskState(CommTaskID);
       commTaskSucceeded = true; // Server confirmed the change
-      debug("TCC - CommTask confirmed");
+      this.logDebug("TCC - CommTask confirmed");
 
       var thermostat = await this._GetThermostat(desiredState.ThermostatID);
-      debug("TCC - Retrieved updated thermostat data");
+      this.logDebug("TCC - Retrieved updated thermostat data");
       tccMessage.validateThermostatData(thermostat, 'ChangeThermostat result');
       return (thermostat);
     } catch (err) {
-      console.error("ChangeThermostat Error:", err.message);
+      this.logError('ChangeThermostat Error: %s', err.message);
 
       // If update succeeded but we just failed to get fresh data back
       if (updateSucceeded && commTaskSucceeded) {
-        debug("Update succeeded but failed to retrieve fresh data, using optimistic update");
+        this.logDebug("Update succeeded but failed to retrieve fresh data, using optimistic update");
         // Return cached data with optimistic update
         const cached = this.thermostats.hb[desiredState.ThermostatID];
         if (cached) {
@@ -159,7 +182,7 @@ tcc.prototype.ChangeThermostat = function(desiredState) {
             }
           }
           // Mark for refresh on next poll
-          debug("Returning optimistic data, will refresh on next poll");
+          this.logDebug("Returning optimistic data, will refresh on next poll");
           return optimistic;
         }
       }
@@ -177,13 +200,13 @@ tcc.prototype.getThermostatSnapshot = function(ThermostatID) {
     try {
       if (!this.sessionID) {
         this.sessionID = await this._login();
-        debug("TCC - Login Succeeded");
+        this.logDebug("TCC - Login Succeeded");
       }
       const thermostat = await this._GetThermostat(ThermostatID);
       tccMessage.validateThermostatData(thermostat, `getThermostatSnapshot ID:${ThermostatID}`);
       return thermostat;
     } catch (err) {
-      console.error("getThermostatSnapshot Error:", err.message);
+      this.logError('getThermostatSnapshot Error: %s', err.message);
       this.sessionID = null;
       throw err;
     }
@@ -193,7 +216,7 @@ tcc.prototype.getThermostatSnapshot = function(ThermostatID) {
 // private interface to update thermostat settings
 
 tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
-  debug("_UpdateThermostat()", desiredState);
+  this.logDebug("_UpdateThermostat()", desiredState);
   return new Promise((resolve, reject) => {
     (async () => {
       try {
@@ -209,11 +232,11 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
         // This ensures the preference persists across Homebridge restarts
         if (desiredState.LastPhysicalHeatMode !== undefined && cachedThermostat) {
           cachedThermostat.LastPhysicalHeatMode = desiredState.LastPhysicalHeatMode;
-          debug("Using persisted LastPhysicalHeatMode=%s for thermostat %s", desiredState.LastPhysicalHeatMode, desiredState.ThermostatID);
+          this.logDebug("Using persisted LastPhysicalHeatMode=%s for thermostat %s", desiredState.LastPhysicalHeatMode, desiredState.ThermostatID);
         }
 
         const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, cachedThermostat, this.usePermanentHolds)));
-        debug("_UpdateThermostat: SOAP Message", message, this.sessionID, desiredState, cachedThermostat, this.usePermanentHolds);
+        this.logDebug("_UpdateThermostat: SOAP Message", message, this.sessionID, desiredState, cachedThermostat, this.usePermanentHolds);
         const { response } = await soapRequest({
           url: URL,
           headers: HEADER,
@@ -224,19 +247,19 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
         if (response.statusCode === 200) {
           const parsedResponse = xmlParser.parse(response.body);
           const ChangeThermostat = parsedResponse["soap:Envelope"]["soap:Body"].ChangeThermostatUIResponse.ChangeThermostatUIResult;
-          // debug("_UpdateThermostat", ChangeThermostat);
+          // this.logDebug("_UpdateThermostat", ChangeThermostat);
           if (ChangeThermostat.Result === "Success") {
-            debug("Success: _UpdateThermostat %s", ChangeThermostat, message);
+            this.logDebug("Success: _UpdateThermostat %s", ChangeThermostat, message);
             resolve(ChangeThermostat.CommTaskID);
           } else {
             this.sessionID = null;
-            debug("ERROR: _UpdateThermostat %s", ChangeThermostat.Result, message);
+            this.logDebug("ERROR: _UpdateThermostat %s", ChangeThermostat.Result, message);
             if (withRetry) {
               try {
                 const CommTaskID = await this._UpdateThermostat(desiredState, false);
                 resolve(CommTaskID);
               } catch (err) {
-                debug("ERROR: _UpdateThermostat retry");
+                this.logDebug("ERROR: _UpdateThermostat retry");
                 reject(err);
               }
             } else {
@@ -244,11 +267,11 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
             }
           }
         } else {
-          debug("ERROR: _UpdateThermostat %s", response, message);
+          this.logDebug("ERROR: _UpdateThermostat %s", response, message);
           reject(new Error("ERROR: _UpdateThermostat (!200)"));
         }
       } catch (err) {
-        debug("_UpdateThermostat message", xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds))));
+        this.logDebug("_UpdateThermostat message", xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds))));
         reject(err);
         this.sessionID = null;
       }
@@ -297,14 +320,14 @@ tcc.prototype._GetCommTaskState = async function(CommTaskID) {
     const parsedResponse = xmlParser.parse(response.body);
     const GetCommTaskStateResponse = parsedResponse["soap:Envelope"]["soap:Body"].GetCommTaskStateResponse;
     if (GetCommTaskStateResponse.GetCommTaskStateResult.Result === "Success") {
-      debug("GetCommTaskState Success %s", GetCommTaskStateResponse.GetCommTaskStateResult);
+      this.logDebug("GetCommTaskState Success %s", GetCommTaskStateResponse.GetCommTaskStateResult);
       return;
     } else {
-      debug("ERROR: GetCommTaskState Failed %s", GetCommTaskStateResponse.GetCommTaskStateResult, message);
+      this.logDebug("ERROR: GetCommTaskState Failed %s", GetCommTaskStateResponse.GetCommTaskStateResult, message);
       throw new Error("ERROR: GetCommTaskState Failed " + GetCommTaskStateResponse.GetCommTaskStateResult.Result);
     }
   } else {
-    debug("ERROR: GetCommTaskState Response Status Code", response.statusCode, message);
+    this.logDebug("ERROR: GetCommTaskState Response Status Code", response.statusCode, message);
     throw new Error("ERROR: GetCommTaskState Response Status Code " + response.statusCode);
   }
 };
@@ -331,17 +354,17 @@ tcc.prototype._GetThermostat = async function(ThermostatID) {
       if (this.thermostats && this.thermostats.hb && this.thermostats.hb[idString]) {
         if (thermostatData.LastPhysicalHeatMode === undefined && this.thermostats.hb[idString].LastPhysicalHeatMode !== undefined) {
           thermostatData.LastPhysicalHeatMode = this.thermostats.hb[idString].LastPhysicalHeatMode;
-          debug("Preserved LastPhysicalHeatMode=%s for thermostat %s", thermostatData.LastPhysicalHeatMode, idString);
+          this.logDebug("Preserved LastPhysicalHeatMode=%s for thermostat %s", thermostatData.LastPhysicalHeatMode, idString);
         }
       }
       this.thermostats.hb[idString] = thermostatData;
       return thermostatData;
     } else {
-      debug("ERROR: GetThermostat Failed %s", GetThermostatResult.Result, message);
+      this.logDebug("ERROR: GetThermostat Failed %s", GetThermostatResult.Result, message);
       throw new Error("ERROR: GetThermostat Failed " + GetThermostatResult.Result);
     }
   } else {
-    debug("ERROR: GetThermostat Response Status Code", response.statusCode, message);
+    this.logDebug("ERROR: GetThermostat Response Status Code", response.statusCode, message);
     throw new Error("ERROR: GetThermostat Response Status Code " + response.statusCode);
   }
 };
@@ -374,20 +397,20 @@ tcc.prototype._GetLocationListData = async function(withRetry) {
           try {
             return await this._GetLocationListData(false);
           } catch (err) {
-            debug("error get locations retry", err);
+            this.logDebug("error get locations retry", err);
             throw err;
           }
         } else {
-          debug("GetLocations error, Info:  %s", GetLocationsResult.Result);
+          this.logDebug("GetLocations error, Info:  %s", GetLocationsResult.Result);
           throw new Error("GetLocations " + GetLocationsResult.Result);
         }
       }
     } else {
-      debug("GetLocations error, statusCode: %s", response.statusCode);
+      this.logDebug("GetLocations error, statusCode: %s", response.statusCode);
       throw new Error("ERROR: GetLocations Response Status Code " + response.statusCode);
     }
   } catch (err) {
-    console.error("GetLocations Error:", err);
+    this.logError('GetLocations Error: %s', err.message || err);
     this.sessionID = null;
     throw err;
   }

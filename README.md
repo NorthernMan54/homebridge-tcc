@@ -24,6 +24,7 @@ A feature-rich Homebridge plugin for **North America Honeywell Total Connect Com
 - 🌡️ **Separate Sensors** - Optional independent temperature/humidity sensors for automations
 - 💧 **Thermostat Humidity Characteristic** - HomeKit exposes indoor humidity even when extra sensors are disabled
 - ⚡ **Smart Polling** - Optimized refresh with background polling for faster updates
+- 🪵 **Structured Logging** - Modernized logging with clearer info/debug output
 - 🔄 **Automatic Recovery** - Handles network issues and API errors gracefully
 - 🎯 **Precise Temperature** - Intelligent rounding for both Celsius and Fahrenheit units
 - 🔧 **Permanent/Temporary Holds** - Choose between permanent holds or schedule-based operation
