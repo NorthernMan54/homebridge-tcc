@@ -6,12 +6,13 @@ This document describes the comprehensive test suite for the emergency heat mode
 
 ## Test Coverage
 
-### Total Test Count: 42 passing tests
+### Total Test Count: 48 passing tests
 
 The test suite covers:
 - ✅ Emergency heat mode tracking and persistence
 - ✅ Mode transitions (all combinations)
 - ✅ Cache preservation across polling cycles
+- ✅ Persistence after Homebridge restarts
 - ✅ Multi-thermostat scenarios
 - ✅ Edge cases and error handling
 - ✅ Data validation
@@ -19,7 +20,7 @@ The test suite covers:
 
 ## Test Files
 
-### `__tests__/emergencyHeat.test.js` (27 tests)
+### `__tests__/emergencyHeat.test.js` (33 tests)
 
 Comprehensive tests for emergency heat mode functionality.
 
@@ -63,6 +64,14 @@ Comprehensive tests for emergency heat mode functionality.
 #### Data Validation (2 tests)
 - ✅ Validates thermostat data structure
 - ✅ Requires valid thermostat data for ChangeThermostatMessage
+
+#### Persistence After Restart (6 tests)
+- ✅ Uses persisted emergency heat preference
+- ✅ Uses persisted regular heat preference
+- ✅ Works immediately after restart before first poll
+- ✅ Persisted preference overrides stale cache
+- ✅ Persistence works across multiple mode changes
+- ✅ Handles missing persisted value gracefully
 
 ### `__tests__/cachePreservation.test.js` (15 tests)
 

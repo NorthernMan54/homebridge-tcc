@@ -1014,6 +1014,14 @@ class ChangeThermostat {
       for (const key in state) {
         this.desiredState[key] = state[key];
       }
+
+      // Inject persisted LastPhysicalHeatMode from accessory context
+      // This ensures preference survives Homebridge restarts
+      if (this.accessory && this.accessory.context && this.accessory.context.lastPhysicalHeatMode !== undefined) {
+        this.desiredState.LastPhysicalHeatMode = this.accessory.context.lastPhysicalHeatMode;
+        debug("Injected persisted LastPhysicalHeatMode=%s from accessory context", this.accessory.context.lastPhysicalHeatMode);
+      }
+
       const d = { resolve, reject };
       this.deferrals.push(d);
 

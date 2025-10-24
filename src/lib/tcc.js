@@ -201,8 +201,19 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
           this.sessionID = await this._login();
         }
         HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/ChangeThermostatUI';
-        const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds)));
-        debug("_UpdateThermostat: SOAP Message", message, this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds);
+
+        // Get cached thermostat data
+        const cachedThermostat = this.thermostats.hb[desiredState.ThermostatID];
+
+        // Inject persisted LastPhysicalHeatMode from desiredState (comes from accessory context)
+        // This ensures the preference persists across Homebridge restarts
+        if (desiredState.LastPhysicalHeatMode !== undefined && cachedThermostat) {
+          cachedThermostat.LastPhysicalHeatMode = desiredState.LastPhysicalHeatMode;
+          debug("Using persisted LastPhysicalHeatMode=%s for thermostat %s", desiredState.LastPhysicalHeatMode, desiredState.ThermostatID);
+        }
+
+        const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, cachedThermostat, this.usePermanentHolds)));
+        debug("_UpdateThermostat: SOAP Message", message, this.sessionID, desiredState, cachedThermostat, this.usePermanentHolds);
         const { response } = await soapRequest({
           url: URL,
           headers: HEADER,

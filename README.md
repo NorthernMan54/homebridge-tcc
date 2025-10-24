@@ -509,7 +509,7 @@ Contributions are welcome! Please:
 
 ## Testing
 
-This plugin includes a comprehensive test suite with 42 tests covering all functionality, especially emergency heat mode and mode transitions.
+This plugin includes a comprehensive test suite with 48 tests covering all functionality, especially emergency heat mode, mode transitions, and persistence across restarts.
 
 ### Running Tests
 
@@ -542,6 +542,7 @@ The test suite includes:
 - ✅ **Emergency heat mode tracking** - Verifies emergency vs regular heat preference is tracked
 - ✅ **Mode transitions** - All combinations tested (Heat→Off→Heat, Auto→Off→Heat, etc.)
 - ✅ **Cache preservation** - Ensures preferences persist across polling cycles
+- ✅ **Persistence after restart** - Preferences survive Homebridge restarts
 - ✅ **Multi-thermostat scenarios** - Independent preference tracking per thermostat
 - ✅ **Edge cases** - Handles undefined values, invalid data, and error conditions
 - ✅ **Data validation** - Ensures thermostat data integrity
@@ -550,13 +551,13 @@ The test suite includes:
 
 ```
 Test Suites: 2 passed, 2 total
-Tests:       42 passed, 42 total
+Tests:       48 passed, 48 total
 Time:        ~0.5 seconds
 ```
 
 ### Test Files
 
-- `__tests__/emergencyHeat.test.js` - Emergency heat functionality (27 tests)
+- `__tests__/emergencyHeat.test.js` - Emergency heat functionality (33 tests)
 - `__tests__/cachePreservation.test.js` - Cache preservation logic (15 tests)
 
 For detailed test documentation, see [TESTING.md](TESTING.md).

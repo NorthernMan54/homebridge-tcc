@@ -489,4 +489,97 @@ describe('Emergency Heat Mode Tests', () => {
       }).toThrow('Invalid thermostat data');
     });
   });
+
+  describe('Persistence After Restart', () => {
+
+    test('Uses persisted emergency heat preference from desiredState', () => {
+      // Simulate restart: cache exists but no LastPhysicalHeatMode yet
+      const thermostat = createMockThermostat(3); // Cool mode, no preference
+      expect(thermostat.LastPhysicalHeatMode).toBeUndefined();
+
+      // Simulate persisted value being injected from accessory context
+      thermostat.LastPhysicalHeatMode = 0; // Emergency heat was persisted
+
+      const desiredState = { TargetHeatingCooling: 1 }; // Want Heat
+      const message = tccMessage.ChangeThermostatMessage('test-session', desiredState, thermostat, false);
+
+      // Should use the persisted emergency heat preference
+      expect(message.ChangeThermostatUI.systemSwitch.$t).toBe(0); // Emergency heat
+    });
+
+    test('Uses persisted regular heat preference from desiredState', () => {
+      const thermostat = createMockThermostat(2); // Off mode, no preference
+      expect(thermostat.LastPhysicalHeatMode).toBeUndefined();
+
+      // Simulate persisted value being injected
+      thermostat.LastPhysicalHeatMode = 1; // Regular heat was persisted
+
+      const desiredState = { TargetHeatingCooling: 1 }; // Want Heat
+      const message = tccMessage.ChangeThermostatMessage('test-session', desiredState, thermostat, false);
+
+      // Should use the persisted regular heat preference
+      expect(message.ChangeThermostatUI.systemSwitch.$t).toBe(1); // Regular heat
+    });
+
+    test('Persisted preference works immediately after restart before first poll', () => {
+      // This simulates the scenario where:
+      // 1. Homebridge restarts
+      // 2. User tries to set Heat mode
+      // 3. First poll hasn't happened yet
+      // 4. But persisted preference from accessory context is available
+
+      const thermostat = createMockThermostat(4); // Auto mode from old cache
+      thermostat.LastPhysicalHeatMode = 0; // Injected from accessory context
+
+      const desiredState = { TargetHeatingCooling: 1 };
+      const message = tccMessage.ChangeThermostatMessage('test-session', desiredState, thermostat, false);
+
+      expect(message.ChangeThermostatUI.systemSwitch.$t).toBe(0); // Emergency heat from persistence
+    });
+
+    test('Persisted preference overrides stale cache data', () => {
+      // Cache might have old data from before restart
+      const thermostat = createMockThermostat(1, 1); // Cache shows regular heat
+
+      // But persisted preference is emergency heat
+      thermostat.LastPhysicalHeatMode = 0; // Override with persisted value
+
+      const desiredState = { TargetHeatingCooling: 1 };
+      const message = tccMessage.ChangeThermostatMessage('test-session', desiredState, thermostat, false);
+
+      // Should use persisted value, not stale cache
+      expect(message.ChangeThermostatUI.systemSwitch.$t).toBe(0); // Emergency heat
+    });
+
+    test('Persistence works across multiple mode changes after restart', () => {
+      const thermostat = createMockThermostat(2); // Off
+      thermostat.LastPhysicalHeatMode = 0; // Persisted emergency heat
+
+      // First change: Heat
+      let desiredState = { TargetHeatingCooling: 1 };
+      let message = tccMessage.ChangeThermostatMessage('test-session', desiredState, thermostat, false);
+      expect(message.ChangeThermostatUI.systemSwitch.$t).toBe(0); // Emergency
+
+      // Change to Cool
+      desiredState = { TargetHeatingCooling: 2 };
+      message = tccMessage.ChangeThermostatMessage('test-session', desiredState, thermostat, false);
+      expect(message.ChangeThermostatUI.systemSwitch.$t).toBe(3); // Cool
+
+      // Back to Heat - should still use persisted preference
+      desiredState = { TargetHeatingCooling: 1 };
+      message = tccMessage.ChangeThermostatMessage('test-session', desiredState, thermostat, false);
+      expect(message.ChangeThermostatUI.systemSwitch.$t).toBe(0); // Emergency (persisted)
+    });
+
+    test('Handles missing persisted value gracefully', () => {
+      const thermostat = createMockThermostat(2); // Off, no preference
+      // No persisted value injected
+
+      const desiredState = { TargetHeatingCooling: 1 };
+      const message = tccMessage.ChangeThermostatMessage('test-session', desiredState, thermostat, false);
+
+      // Should default to regular heat
+      expect(message.ChangeThermostatUI.systemSwitch.$t).toBe(1); // Regular heat (default)
+    });
+  });
 });
