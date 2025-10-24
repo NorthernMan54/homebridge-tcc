@@ -47,7 +47,6 @@ class TccPlatform {
     this.verificationPollTimeout = null; // For smart polling after changes
     // Use WeakMap to store ChangeThermostat instances (won't be serialized)
     this.changeThermostatMap = new WeakMap();
-    this.fanManualModeMap = new WeakMap();
     this.refreshInFlight = null;
     this.backgroundRefresh = Object.prototype.hasOwnProperty.call(config, 'backgroundRefresh') ? config.backgroundRefresh : 180;
     if (this.backgroundRefresh === false) {
@@ -515,6 +514,11 @@ class TccPlatform {
   }
 
   changeFanMode(accessory, fanMode) {
+    const capabilities = accessory.context && accessory.context.fanCapabilities;
+    if (!capabilities || !capabilities.CanControl) {
+      return Promise.reject(new Error('Fan control not supported by this thermostat'));
+    }
+
     return this.thermostats.ChangeFanMode({
       ThermostatID: accessory.context.ThermostatID,
       FanMode: fanMode
@@ -595,45 +599,6 @@ class TccPlatform {
     return this.myAccessories.find(accessory => accessory.context.name === accessoryName);
   }
 
-  ensureFanService(fanCapabilities) {
-    if (!fanCapabilities || !fanCapabilities.CanControl) {
-      if (this.fanService) {
-        this.accessory.removeService(this.fanService);
-        this.fanService = null;
-      }
-      return;
-    }
-
-    const manualModes = [];
-    if (fanCapabilities.CanSetOn) {
-      manualModes.push('On');
-    }
-    if (fanCapabilities.CanSetCirculate) {
-      manualModes.push('Circulate');
-    }
-    this.accessory.context.preferredFanManualMode = manualModes[0] || 'On';
-    this.accessory.context.fanCapabilities = fanCapabilities;
-    this.supportsFanTargetState = fanCapabilities.CanSetAuto && manualModes.length > 0;
-
-    if (!this.fanService) {
-      this.fanService = this.accessory.getService(Service.Fanv2) || this.accessory.addService(Service.Fanv2, `${this.name} Fan`);
-      this.fanService
-        .getCharacteristic(Characteristic.Active)
-        .on('set', setFanActive.bind(this.accessory));
-
-      if (this.supportsFanTargetState) {
-        this.fanService
-          .getCharacteristic(Characteristic.TargetFanState)
-          .on('set', setFanTargetState.bind(this.accessory));
-      }
-
-      this.fanService
-        .getCharacteristic(Characteristic.CurrentFanState);
-    }
-
-    this.accessory.fanService = this.fanService;
-    this.accessory.supportsFanTargetState = this.supportsFanTargetState;
-  }
 }
 
 class TccAccessory {
@@ -869,6 +834,54 @@ class TccAccessory {
       this.ensureFanService(fanCapabilities);
       return this.accessory;
     }
+  }
+
+  ensureFanService(fanCapabilities) {
+    const accessory = this.accessory;
+    if (!accessory) {
+      return;
+    }
+
+    if (!fanCapabilities || !fanCapabilities.CanControl) {
+      if (accessory.fanService) {
+        accessory.removeService(accessory.fanService);
+        accessory.fanService = null;
+        accessory.supportsFanTargetState = false;
+      }
+      return;
+    }
+
+    const manualModes = [];
+    if (fanCapabilities.CanSetOn) {
+      manualModes.push('On');
+    }
+    if (fanCapabilities.CanSetCirculate) {
+      manualModes.push('Circulate');
+    }
+
+    accessory.context.preferredFanManualMode = manualModes[0] || 'On';
+    accessory.context.fanCapabilities = fanCapabilities;
+    const supportsTargetState = fanCapabilities.CanSetAuto && manualModes.length > 0;
+
+    let fanService = accessory.getService(Service.Fanv2);
+    if (!fanService) {
+      fanService = accessory.addService(Service.Fanv2, `${this.name} Fan`);
+      fanService
+        .getCharacteristic(Characteristic.Active)
+        .on('set', setFanActive.bind(accessory));
+    }
+
+    if (supportsTargetState) {
+      const targetChar = fanService.getCharacteristic(Characteristic.TargetFanState) || fanService.addCharacteristic(Characteristic.TargetFanState);
+      targetChar.on('set', setFanTargetState.bind(accessory));
+    } else if (fanService.testCharacteristic && fanService.testCharacteristic(Characteristic.TargetFanState)) {
+      fanService.removeCharacteristic(fanService.getCharacteristic(Characteristic.TargetFanState));
+    }
+
+    fanService.getCharacteristic(Characteristic.CurrentFanState);
+
+    accessory.fanService = fanService;
+    accessory.supportsFanTargetState = supportsTargetState;
   }
 }
 
