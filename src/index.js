@@ -28,21 +28,47 @@ function pruneUnsupportedServices(accessory, logger) {
   if (!accessory || !accessory.services) {
     return;
   }
-  const allowedServiceUUIDs = new Set([
-    Service.AccessoryInformation.UUID,
+
+  const managedList = accessory.context.managedServiceUUIDs || [];
+  const managedSet = new Set(managedList);
+  const fallbackAllowed = new Set([
     Service.Thermostat.UUID,
     Service.TemperatureSensor.UUID,
     Service.HumiditySensor.UUID
   ]);
 
   accessory.services
-    .filter(service => service && !allowedServiceUUIDs.has(service.UUID))
+    .filter(service => service && service.UUID !== Service.AccessoryInformation.UUID)
     .forEach(service => {
-      if (logger && typeof logger.info === 'function') {
-        logger.info('Removing unsupported service %s (%s)', service.displayName, service.UUID);
+      const isManaged = managedSet.has(service.UUID);
+      const isFallbackAllowed = fallbackAllowed.has(service.UUID);
+      if (!isManaged && !isFallbackAllowed) {
+        if (logger && typeof logger.info === 'function') {
+          logger.info('Removing unsupported service %s (%s)', service.displayName, service.UUID);
+        }
+        accessory.removeService(service);
       }
-      accessory.removeService(service);
     });
+}
+
+function registerManagedService(accessory, service) {
+  if (!accessory || !service) {
+    return;
+  }
+  if (!Array.isArray(accessory.context.managedServiceUUIDs)) {
+    accessory.context.managedServiceUUIDs = [];
+  }
+  if (!accessory.context.managedServiceUUIDs.includes(service.UUID)) {
+    accessory.context.managedServiceUUIDs.push(service.UUID);
+  }
+}
+
+function unregisterManagedService(accessory, service) {
+  if (!accessory || !service || !Array.isArray(accessory.context.managedServiceUUIDs)) {
+    return;
+  }
+  accessory.context.managedServiceUUIDs = accessory.context.managedServiceUUIDs
+    .filter(uuid => uuid !== service.UUID);
 }
 
 class TccPlatform {
@@ -261,15 +287,28 @@ class TccPlatform {
     accessory.log = accessoryLogger.info.bind(accessoryLogger);
     accessoryLogger.info('Configuring cached accessory');
 
+    const thermostatService = accessory.getService(Service.Thermostat);
+    if (thermostatService) {
+      registerManagedService(accessory, thermostatService);
+    }
+    const tempService = accessory.getService(accessory.displayName + " Temperature");
+    if (tempService) {
+      registerManagedService(accessory, tempService);
+    }
+    const humidityService = accessory.getService(accessory.displayName + " Humidity");
+    if (humidityService) {
+      registerManagedService(accessory, humidityService);
+    }
+
     pruneUnsupportedServices(accessory, accessoryLogger);
 
-    const thermostatService = accessory.getService(Service.Thermostat);
     if (thermostatService) {
       const legacyFanService = accessory.getService(Service.Fanv2) || accessory.getService(Service.Fan);
       if (legacyFanService) {
         accessoryLogger.info('Removing legacy fan service from cached accessory');
         accessory.removeService(legacyFanService);
       }
+      registerManagedService(accessory, thermostatService);
       thermostatService
         .getCharacteristic(Characteristic.TargetHeatingCoolingState)
         .on('get', getTargetHeatingCooling.bind(accessory))
@@ -651,7 +690,8 @@ class TccAccessory {
         .setCharacteristic(Characteristic.SerialNumber, hostname + "-" + this.name)
         .setCharacteristic(Characteristic.FirmwareRevision, FirmwareRevision);
 
-      this.accessory.addService(Service.Thermostat, this.name);
+      const thermostatService = this.accessory.addService(Service.Thermostat, this.name);
+      registerManagedService(this.accessory, thermostatService);
 
       // check if user wants separate temperature and humidity sensors by zone/thermostat
       this.logger.debug('createInsideHumiditySensors=%s', createInsideHumiditySensors);
@@ -659,6 +699,7 @@ class TccAccessory {
       if (createInsideTemperatureSensors) {
         // debug("TccAccessory() " + this.name + " InsideTemperature = true, existing sensor");
         this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
+        registerManagedService(this.accessory, this.InsideTemperatureService);
         this.InsideTemperatureService
           .getCharacteristic(Characteristic.CurrentTemperature)
           .setProps({
@@ -671,13 +712,14 @@ class TccAccessory {
       if (createInsideHumiditySensors) {
         this.logger.debug('Configuring dedicated humidity sensor for %s', this.name);
         this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
+        registerManagedService(this.accessory, this.InsideHumidityService);
         this.InsideHumidityService
           .getCharacteristic(Characteristic.CurrentRelativeHumidity)
           .on('get', getSensorHumidity.bind(this.accessory, 'InsideHumidity'));
       }
 
       //       .setProps({validValues: hbValues.TargetHeatingCoolingStateValidValues})
-      const thermostatService = this.accessory.getService(Service.Thermostat);
+      registerManagedService(this.accessory, thermostatService);
       thermostatService
         .getCharacteristic(Characteristic.TargetHeatingCoolingState)
         .setProps({
@@ -792,6 +834,7 @@ class TccAccessory {
       if (createInsideTemperatureSensors && !this.accessory.getService(this.name + " Temperature")) {
         this.logger.debug('Adding dedicated temperature sensor for %s', this.name);
         this.InsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, this.name + " Temperature", "Inside");
+        registerManagedService(this.accessory, this.InsideTemperatureService);
 
         this.InsideTemperatureService
           .getCharacteristic(Characteristic.CurrentTemperature)
@@ -801,17 +844,22 @@ class TccAccessory {
           })
           .on('get', getSensorTemperature.bind(this.accessory, 'CurrentTemperature'));
       } else if (!createInsideTemperatureSensors && this.accessory.getService(this.name + " Temperature")) {
-        this.accessory.removeService(this.accessory.getService(this.name + " Temperature"));
+        const tempService = this.accessory.getService(this.name + " Temperature");
+        unregisterManagedService(this.accessory, tempService);
+        this.accessory.removeService(tempService);
       }
       if (createInsideHumiditySensors && !this.accessory.getService(this.name + " Humidity")) {
         this.logger.debug('Adding dedicated humidity sensor for %s', this.name);
         this.InsideHumidityService = this.accessory.addService(Service.HumiditySensor, this.name + " Humidity", "Inside");
+        registerManagedService(this.accessory, this.InsideHumidityService);
 
         this.InsideHumidityService
           .getCharacteristic(Characteristic.CurrentRelativeHumidity)
           .on('get', getSensorHumidity.bind(this.accessory, 'InsideHumidity'));
       } else if (!createInsideHumiditySensors && this.accessory.getService(this.name + " Humidity")) {
-        this.accessory.removeService(this.accessory.getService(this.name + " Humidity"));
+        const humidityService = this.accessory.getService(this.name + " Humidity");
+        unregisterManagedService(this.accessory, humidityService);
+        this.accessory.removeService(humidityService);
       }
       return this.accessory;
     }
@@ -850,6 +898,7 @@ class TccSensorsAccessory {
       // create outside temp sensor
       this.logger.debug('Configuring outside temperature sensor for %s', this.name);
       this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "Outside");
+      registerManagedService(this.accessory, this.OutsideTemperatureService);
       this.OutsideTemperatureService
         .getCharacteristic(Characteristic.CurrentTemperature)
         .setProps({
@@ -865,6 +914,7 @@ class TccSensorsAccessory {
         // create outside humidity sensor
         this.logger.debug('Configuring outside humidity sensor for %s', this.name);
         this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
+        registerManagedService(this.accessory, this.OutsideHumidityService);
         this.OutsideHumidityService
           .getCharacteristic(Characteristic.CurrentRelativeHumidity)
           .on('get', getSensorHumidity.bind(this.accessory, 'OutsideHumidity'));
@@ -890,6 +940,7 @@ class TccSensorsAccessory {
       if (!this.accessory.getService("Outside Temperature")) {
         this.logger.debug('Adding outside temperature sensor service');
         this.OutsideTemperatureService = this.accessory.addService(Service.TemperatureSensor, "Outside Temperature", "Outside");
+        registerManagedService(this.accessory, this.OutsideTemperatureService);
 
         this.OutsideTemperatureService
           .getCharacteristic(Characteristic.CurrentTemperature)
@@ -905,12 +956,15 @@ class TccSensorsAccessory {
         this.logger.debug('Invalid outside humidity value for %s (%s)', this.device.Name, this.device.ThermostatID);
 
         if (this.accessory.getService("Outside Humidity")) {
-          this.accessory.removeService(this.accessory.getService("Outside Humidity"));
+          const humiditySvc = this.accessory.getService("Outside Humidity");
+          unregisterManagedService(this.accessory, humiditySvc);
+          this.accessory.removeService(humiditySvc);
         }
       } else {
         if (!this.accessory.getService("Outside Humidity")) {
           this.logger.debug('Adding outside humidity sensor service');
           this.OutsideHumidityService = this.accessory.addService(Service.HumiditySensor, "Outside Humidity", "Outside");
+          registerManagedService(this.accessory, this.OutsideHumidityService);
 
           this.OutsideHumidityService
             .getCharacteristic(Characteristic.CurrentRelativeHumidity)
