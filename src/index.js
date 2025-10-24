@@ -242,6 +242,11 @@ class TccPlatform {
 
     const thermostatService = accessory.getService(Service.Thermostat);
     if (thermostatService) {
+      const legacyFanService = accessory.getService(Service.Fanv2) || accessory.getService(Service.Fan);
+      if (legacyFanService) {
+        accessoryLogger.info('Removing legacy fan service from cached accessory');
+        accessory.removeService(legacyFanService);
+      }
       thermostatService
         .getCharacteristic(Characteristic.TargetHeatingCoolingState)
         .on('get', getTargetHeatingCooling.bind(accessory))
