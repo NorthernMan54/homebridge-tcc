@@ -507,6 +507,68 @@ Contributions are welcome! Please:
 - Documentation improvements
 - Bug fixes
 
+## Testing
+
+This plugin includes a comprehensive test suite with 42 tests covering all functionality, especially emergency heat mode and mode transitions.
+
+### Running Tests
+
+**Run all tests:**
+```bash
+npm test
+```
+
+**Run tests with coverage report:**
+```bash
+npm run test-coverage
+```
+
+**Run specific test file:**
+```bash
+npm test emergencyHeat
+# or
+npm test cachePreservation
+```
+
+**Watch mode (for development):**
+```bash
+npx jest --watch
+```
+
+### Test Coverage
+
+The test suite includes:
+
+- ✅ **Emergency heat mode tracking** - Verifies emergency vs regular heat preference is tracked
+- ✅ **Mode transitions** - All combinations tested (Heat→Off→Heat, Auto→Off→Heat, etc.)
+- ✅ **Cache preservation** - Ensures preferences persist across polling cycles
+- ✅ **Multi-thermostat scenarios** - Independent preference tracking per thermostat
+- ✅ **Edge cases** - Handles undefined values, invalid data, and error conditions
+- ✅ **Data validation** - Ensures thermostat data integrity
+
+### Test Results
+
+```
+Test Suites: 2 passed, 2 total
+Tests:       42 passed, 42 total
+Time:        ~0.5 seconds
+```
+
+### Test Files
+
+- `__tests__/emergencyHeat.test.js` - Emergency heat functionality (27 tests)
+- `__tests__/cachePreservation.test.js` - Cache preservation logic (15 tests)
+
+For detailed test documentation, see [TESTING.md](TESTING.md).
+
+### Contributing Tests
+
+When adding features:
+1. Add corresponding test cases
+2. Ensure all tests pass: `npm test`
+3. Maintain test coverage: `npm run test-coverage`
+4. Document test scenarios in TESTING.md
+
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/thindiyeh/homebridge-tcc/issues)
