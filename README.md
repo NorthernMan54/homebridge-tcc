@@ -30,6 +30,7 @@ A feature-rich Homebridge plugin for **North America Honeywell Total Connect Com
 - 🔧 **Permanent/Temporary Holds** - Choose between permanent holds or schedule-based operation
 - 🌍 **Outdoor Sensors** - Track outdoor temperature and humidity
 - ⚙️ **Auto Mode Support** - Full support for thermostats with auto heat/cool switching
+- 🌀 **Fan Control** - Toggle fan between auto and manual modes directly from HomeKit
 
 ## Compatibility
 
@@ -512,7 +513,7 @@ Contributions are welcome! Please:
 
 ## Testing
 
-This plugin includes a comprehensive test suite with 70 tests covering all functionality, especially emergency heat mode, humidity reporting, mode transitions, logging, and persistence across restarts.
+This plugin includes a comprehensive test suite with 71 tests covering all functionality, especially emergency heat mode, humidity reporting, fan control, mode transitions, logging, and persistence across restarts.
 
 ### Running Tests
 
@@ -554,7 +555,7 @@ The test suite includes:
 
 ```
 Test Suites: 2 passed, 2 total
-Tests:       70 passed, 70 total
+Tests:       71 passed, 71 total
 Time:        ~0.5 seconds
 ```
 
