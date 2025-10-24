@@ -286,6 +286,7 @@ function targetTemperature(thermostat) {
       // Not sure what to do here, so will use heat set point
       targetTemperature = thermostat.UI.HeatSetpoint;
       break;
+    case 0: // Emergency heat
     case 1: // Heat
     case 4: // Auto heat
       targetTemperature = thermostat.UI.HeatSetpoint;
