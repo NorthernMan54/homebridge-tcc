@@ -5,6 +5,8 @@
 
 A feature-rich Homebridge plugin for **North America Honeywell Total Connect Comfort (TCC)** WiFi thermostats. Brings your Honeywell thermostat into Apple HomeKit with full temperature control, mode switching, and historical data logging.
 
+> **Version 1.0.0**: Complete codebase refactoring with modular architecture, improved maintainability, and comprehensive documentation. See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
+
 > **Note**: This plugin is for the **North American** TCC site only. It does not work with the International Honeywell Total Connect Comfort site.
 
 ## Features
@@ -438,12 +440,29 @@ Honeywell TCC enforces rate limiting to prevent excessive API calls:
 
 ### Architecture
 
+This plugin follows a **modular, layered architecture** for maintainability and extensibility:
+
+```
+Entry Point (index.js)
+    ↓
+Platform (platform.js) ← Coordinates everything
+    ↓
+├─ Accessories/     ← HAP services & characteristics
+├─ Handlers/        ← Get/set implementations
+├─ Helpers/         ← Utilities & request consolidation
+└─ API Client/      ← TCC SOAP communication
+```
+
+**Key Features**:
 - **Language**: JavaScript (Node.js)
 - **Protocol**: SOAP over HTTPS
 - **API**: Honeywell TCC MobileV2 API
 - **Queue**: Sequential request processing (prevents race conditions)
 - **Session Management**: Automatic login/re-login
 - **Error Handling**: Retry logic with exponential backoff
+- **Modular Design**: Clean separation of concerns (v1.0.0+)
+
+📖 **For detailed architecture information, see [ARCHITECTURE.md](ARCHITECTURE.md)**
 
 ### Dependencies
 
@@ -495,10 +514,21 @@ A: The plugin will show "No Response" in HomeKit. Your physical thermostat conti
 **Q: Is my password secure?**
 A: Your password is stored in Homebridge's config file. Secure your Homebridge server appropriately. The plugin communicates with Honeywell over HTTPS.
 
+## Documentation
+
+This plugin includes comprehensive documentation for users and developers:
+
+- **[README.md](README.md)** (this file) - User guide, features, configuration, troubleshooting
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, design patterns, data flow
+- **[API.md](API.md)** - Developer API reference, type definitions, examples
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines, coding standards, development workflow
+- **[TESTING.md](TESTING.md)** - Test documentation, running tests, writing tests
+
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome! Please see **[CONTRIBUTING.md](CONTRIBUTING.md)** for detailed guidelines.
 
+**Quick start**:
 1. Fork the repository
 2. Create a feature branch
 3. Test thoroughly with your thermostat
@@ -509,6 +539,8 @@ Contributions are welcome! Please:
 - International TCC API support
 - Documentation improvements
 - Bug fixes
+
+📖 **For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md)**
 
 ## Testing
 
