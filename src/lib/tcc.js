@@ -1,4 +1,5 @@
 const soapRequest = require('easy-soap-request');
+<<<<<<< HEAD
 const { XMLBuilder, XMLParser } = require('fast-xml-parser');
 const tccMessage = require('./tccMessage.js');
 const debug = require('debug')('tcc-lib');
@@ -13,14 +14,41 @@ const xmlParser = new XMLParser({
   parseAttributeValue: true,
   parseTagValue: true,
   trimValues: true
+=======
+const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+var tccMessage = require('./tccMessage.js');
+var debug = require('debug')('tcc-lib');
+
+// Configure XML parser and builder
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "@",
+  parseAttributeValue: true,
+  parseTagValue: true,
+  trimValues: true,
+  parseTrueNumberOnly: true,
+  arrayMode: false
+>>>>>>> main
 });
 
 const xmlBuilder = new XMLBuilder({
   ignoreAttributes: false,
+<<<<<<< HEAD
   attributeNamePrefix: '',
   textNodeName: '$t',
   format: false,
   suppressEmptyNode: true
+=======
+  attributeNamePrefix: "@",
+  suppressEmptyNode: true,
+  format: false
+});
+const {
+  default: PQueue
+} = require('p-queue');
+const queue = new PQueue({
+  concurrency: 1
+>>>>>>> main
 });
 
 let count = 0;
@@ -224,6 +252,7 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
           this.sessionID = await this._login();
         }
         HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/ChangeThermostatUI';
+<<<<<<< HEAD
 
         // Get cached thermostat data
         const cachedThermostat = this.thermostats.hb[desiredState.ThermostatID];
@@ -238,6 +267,13 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
         const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, cachedThermostat, this.usePermanentHolds)));
         this.logDebug("_UpdateThermostat: SOAP Message", message, this.sessionID, desiredState, cachedThermostat, this.usePermanentHolds);
         const { response } = await soapRequest({
+=======
+        var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds)));
+        debug("_UpdateThermostat: SOAP Message", message, this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds);
+        var {
+          response
+        } = await soapRequest({
+>>>>>>> main
           url: URL,
           headers: HEADER,
           xml: message,
@@ -245,9 +281,14 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
           withCredentials: true
         });
         if (response.statusCode === 200) {
+<<<<<<< HEAD
           const parsedResponse = xmlParser.parse(response.body);
           const ChangeThermostat = parsedResponse["soap:Envelope"]["soap:Body"].ChangeThermostatUIResponse.ChangeThermostatUIResult;
           // this.logDebug("_UpdateThermostat", ChangeThermostat);
+=======
+          var ChangeThermostat = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].ChangeThermostatUIResponse.ChangeThermostatUIResult;
+          // debug("_UpdateThermostat", ChangeThermostat);
+>>>>>>> main
           if (ChangeThermostat.Result === "Success") {
             this.logDebug("Success: _UpdateThermostat %s", ChangeThermostat, message);
             resolve(ChangeThermostat.CommTaskID);
@@ -271,7 +312,12 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
           reject(new Error("ERROR: _UpdateThermostat (!200)"));
         }
       } catch (err) {
+<<<<<<< HEAD
         this.logDebug("_UpdateThermostat message", xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds))));
+=======
+        // console.error("_UpdateThermostat Error:", err);
+        debug("_UpdateThermostat message", xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds))));
+>>>>>>> main
         reject(err);
         this.sessionID = null;
       }
@@ -281,6 +327,7 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
 
 // private interface to login to TCC
 
+<<<<<<< HEAD
 tcc.prototype._login = async function() {
   HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/AuthenticateUserLogin';
   const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.AuthenticateUserLoginMessage(this._username, this._password)));
@@ -290,6 +337,40 @@ tcc.prototype._login = async function() {
     xml: message,
     timeout: this.timeout,
     withCredentials: true
+=======
+tcc.prototype._login = function() {
+  return new Promise((resolve, reject) => {
+    (async () => {
+      try {
+        HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/AuthenticateUserLogin';
+        var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.AuthenticateUserLoginMessage(this._username, this._password)));
+        var {
+          response
+        } = await soapRequest({
+          url: URL,
+          headers: HEADER,
+          xml: message,
+          timeout: this.timeout,
+          withCredentials: true
+        });
+        if (response.statusCode === 200) {
+          var AuthenticateUserLoginResponse = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].AuthenticateUserLoginResponse;
+          if (AuthenticateUserLoginResponse.AuthenticateUserLoginResult.Result === "Success") {
+            resolve(AuthenticateUserLoginResponse.AuthenticateUserLoginResult.SessionID);
+          } else {
+            // debug("ERROR: Login Failed %s", AuthenticateUserLoginResponse.AuthenticateUserLoginResult.Result, message);
+            reject(new Error(AuthenticateUserLoginResponse.AuthenticateUserLoginResult.Result));
+          }
+        } else {
+          // debug("ERROR: Login Response Status Code", response.statusCode, message);
+          reject(new Error("Login Response Status Code", response.statusCode));
+        }
+      } catch (err) {
+        // console.error("login Error:", err.message);
+        reject(err);
+      }
+    })();
+>>>>>>> main
   });
   if (response.statusCode === 200) {
     const parsedResponse = xmlParser.parse(response.body);
@@ -306,6 +387,7 @@ tcc.prototype._login = async function() {
 
 // private interface to retrieve status of a thermostat update
 
+<<<<<<< HEAD
 tcc.prototype._GetCommTaskState = async function(CommTaskID) {
   HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetCommTaskState';
   const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetCommTaskStateMessage(this.sessionID, CommTaskID)));
@@ -315,6 +397,44 @@ tcc.prototype._GetCommTaskState = async function(CommTaskID) {
     xml: message,
     timeout: this.timeout,
     withCredentials: true
+=======
+tcc.prototype._GetCommTaskState = function(CommTaskID) {
+  // SOAPAction http://services.alarmnet.com/Services/MobileV2/GetCommTaskState
+  return new Promise((resolve, reject) => {
+    (async () => {
+      try {
+        HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetCommTaskState';
+        var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetCommTaskStateMessage(this.sessionID, CommTaskID)));
+        // debug("_GetCommTaskState", message);
+        var {
+          response
+        } = await soapRequest({
+          url: URL,
+          headers: HEADER,
+          xml: message,
+          timeout: this.timeout,
+          withCredentials: true
+        });
+        // debug("_GetCommTaskState", response.statusCode, response.body);
+        if (response.statusCode === 200) {
+          var GetCommTaskStateResponse = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].GetCommTaskStateResponse;
+          if (GetCommTaskStateResponse.GetCommTaskStateResult.Result === "Success") {
+            debug("GetCommTaskState Success %s", GetCommTaskStateResponse.GetCommTaskStateResult);
+            resolve();
+          } else {
+            debug("ERROR: GetCommTaskState Failed %s", GetCommTaskStateResponse.GetCommTaskStateResult, message);
+            reject(new Error("ERROR: GetCommTaskState Failed" + GetCommTaskStateResponse.GetCommTaskStateResult.Result));
+          }
+        } else {
+          debug("ERROR: GetCommTaskState Response Status Code", response.statusCode, message);
+          reject(new Error("ERROR: GetCommTaskState Response Status Code", response.statusCode));
+        }
+      } catch (err) {
+        // console.error("login Error:", err.message);
+        reject(err);
+      }
+    })();
+>>>>>>> main
   });
   if (response.statusCode === 200) {
     const parsedResponse = xmlParser.parse(response.body);
@@ -334,6 +454,7 @@ tcc.prototype._GetCommTaskState = async function(CommTaskID) {
 
 // private interface to retrieve thermostat settings
 
+<<<<<<< HEAD
 tcc.prototype._GetThermostat = async function(ThermostatID) {
   HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetThermostat';
   const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetThermostatMessage(this.sessionID, ThermostatID)));
@@ -343,6 +464,47 @@ tcc.prototype._GetThermostat = async function(ThermostatID) {
     xml: message,
     timeout: this.timeout,
     withCredentials: true
+=======
+tcc.prototype._GetThermostat = function(ThermostatID) {
+  // SOAPAction http://services.alarmnet.com/Services/MobileV2/GetThermostat
+  return new Promise((resolve, reject) => {
+    (async () => {
+      try {
+        HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetThermostat';
+        var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetThermostatMessage(this.sessionID, ThermostatID)));
+        // debug("_GetThermostat", message);
+        var {
+          response
+        } = await soapRequest({
+          url: URL,
+          headers: HEADER,
+          xml: message,
+          timeout: this.timeout,
+          withCredentials: true
+        });
+        // debug("_GetThermostat", response.statusCode, response.body);
+        if (response.statusCode === 200) {
+          var GetThermostatResult = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].GetThermostatResponse.GetThermostatResult;
+          // debug("GetThermostatResult", GetThermostatResult);
+          if (GetThermostatResult.Result === "Success") {
+            // debug("_GetThermostat - delta", JSON.stringify(diff(GetThermostatResult.Thermostat, this.thermostats.hb[ThermostatID.toString()]), null, 2));
+            this.thermostats.hb[ThermostatID.toString()] = tccMessage.toHb(GetThermostatResult.Thermostat);
+            // debug("_GetThermostat Temp %s Switch %s", toHb(GetThermostatResult.Thermostat).TargetTemperature, toHb(GetThermostatResult.Thermostat).TargetHeatingCoolingState);
+            resolve(tccMessage.toHb(GetThermostatResult.Thermostat));
+          } else {
+            debug("ERROR: GetThermostat Failed %s", GetThermostatResult.Result, message);
+            reject(new Error("ERROR: GetThermostat Failed" + GetThermostatResult.Result));
+          }
+        } else {
+          debug("ERROR: GetThermostat Response Status Code", response.statusCode, message);
+          reject(new Error("ERROR: GetThermostat Response Status Code", response.statusCode));
+        }
+      } catch (err) {
+        // console.error("login Error:", err.message);
+        reject(err);
+      }
+    })();
+>>>>>>> main
   });
   if (response.statusCode === 200) {
     const parsedResponse = xmlParser.parse(response.body);
@@ -371,6 +533,7 @@ tcc.prototype._GetThermostat = async function(ThermostatID) {
 
 // private interface to retrieve all thermostat settings
 
+<<<<<<< HEAD
 tcc.prototype._GetLocationListData = async function(withRetry) {
   try {
     if (!this.sessionID) {
@@ -388,6 +551,29 @@ tcc.prototype._GetLocationListData = async function(withRetry) {
     if (response.statusCode === 200) {
       const parsedResponse = xmlParser.parse(response.body);
       const GetLocationsResult = parsedResponse["soap:Envelope"]["soap:Body"].GetLocationsResponse.GetLocationsResult;
+=======
+tcc.prototype._GetLocationListData = function(withRetry) {
+  return new Promise((resolve, reject) => {
+    (async () => {
+      try {
+        if (!this.sessionID) {
+          this.sessionID = await this._login();
+        }
+        HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetLocations';
+        var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetLocationsMessage(this.sessionID)));
+        // debug("SOAP Message", parser.toXml(soapMessage(GetLocations)));
+        var {
+          response
+        } = await soapRequest({
+          url: URL,
+          headers: HEADER,
+          xml: message,
+          timeout: this.timeout,
+          withCredentials: true
+        });
+        if (response.statusCode === 200) {
+          var GetLocationsResult = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].GetLocationsResponse.GetLocationsResult;
+>>>>>>> main
 
       if (GetLocationsResult.Result === "Success" && GetLocationsResult.Locations && GetLocationsResult.Locations.LocationInfo) {
         return tccMessage.normalizeToHb(GetLocationsResult.Locations);
