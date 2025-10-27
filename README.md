@@ -68,15 +68,6 @@ Tested and confirmed working with:
 npm install -g homebridge-tcc
 ```
 
-### On Windows
-
-Ensure `node-gyp` is properly configured before installing:
-
-```bash
-gyp ERR! find Python Python is not set from command line or npm configuration
-```
-
-If you see this error, follow the [node-gyp Windows setup guide](https://github.com/nodejs/node-gyp#on-windows).
 
 ## Configuration
 
@@ -610,7 +601,7 @@ When adding features:
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/thindiyeh/homebridge-tcc/issues)
+- **Issues**: [GitHub Issues](https://github.com/NorthernMan54/homebridge-tcc/issues)
 - **Documentation**: This README
 - **Homebridge**: [Homebridge Discord](https://discord.gg/kqNCe2D)
 
