@@ -62,12 +62,20 @@
         ]
       },
       "refresh": {
-        "title": "Refresh Token",
+        "title": "Refresh Interval",
         "default": 600,
         "type": "integer",
-        "minimum": 30,
+        "minimum": 600,
         "maximum": 3600,
-        "description": "Data polling interval in seconds, defaults to 10 minutes.  Setting lower than 10 minutes may trigger request rate limiter on Honeywell site."
+        "description": "Main polling interval in seconds (default: 600 / 10 minutes). Minimum 600 to avoid Honeywell rate limiting."
+      },
+      "backgroundRefresh": {
+        "title": "Background Refresh",
+        "type": "integer",
+        "minimum": 30,
+        "maximum": 600,
+        "placeholder": "180",
+        "description": "Fast polling interval in seconds for quicker updates (default: 180 / 3 minutes). Lower = faster updates. Try 60 for 1-minute updates. Set to 0 to disable. Must be less than main refresh interval."
       },
       "storage": {
         "title": "Storage",
@@ -105,7 +113,7 @@
       "title": "Optional Settings",
       "expandable": true,
       "expanded": false,
-      "items": ["refresh", "storage", "debug"]
+      "items": ["refresh", "backgroundRefresh", "storage", "debug"]
     }
   ]
 }

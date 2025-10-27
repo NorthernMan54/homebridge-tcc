@@ -9,7 +9,17 @@ module.exports = {
   GetThermostatMessage: GetThermostatMessage,
   normalizeToHb: normalizeToHb,
   toHb: toHb,
-  diff: diff
+  toCelcius: toCelcius,
+  toThermostat: toThermostat,
+  currentState: currentState,
+  stateValidValues: stateValidValues,
+  targetState: targetState,
+  targetTemperature: targetTemperature,
+  systemSwitch: systemSwitch,
+  heatSetpoint: heatSetpoint,
+  coolSetpoint: coolSetpoint,
+  diff: diff,
+  validateThermostatData: validateThermostatData
 };
 
 function soapMessage(body) {
@@ -20,8 +30,8 @@ function soapMessage(body) {
       "@xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/",
       "@xmlns": "http://services.alarmnet.com/Services/MobileV2/",
       "soap:Body": body
-      }
     }
+  }
   );
 }
 
@@ -51,6 +61,12 @@ function GetLocationsMessage(sessionID) {
 //  2 - Permanent override
 
 function ChangeThermostatMessage(sessionID, desiredState, thermostat, usePermanentHolds) {
+  if (!thermostat || !thermostat.device || !thermostat.device.UI) {
+    throw new Error("Invalid thermostat data in ChangeThermostatMessage");
+  }
+  // Make a deep copy to avoid modifying the cached thermostat object
+  // const thermostatCopy = JSON.parse(JSON.stringify(thermostat));
+
   // debug("ChangeThermostatMessage", desiredState);
   return ({
     ChangeThermostatUI: {
@@ -93,36 +109,27 @@ function GetThermostatMessage(sessionID, ThermostatID) {
 }
 
 function normalizeToHb(devices) {
-  devices.hb = [];
-  // Flatten structure
-  if (Array.isArray(devices.LocationInfo)) {
-    devices.LocationInfo.forEach((LocationInfo, i) => {
-      if (Array.isArray(LocationInfo.Thermostats.ThermostatInfo)) {
-        LocationInfo.Thermostats.ThermostatInfo.forEach((item, i) => {
-          // debug("normalizeToHb", item.ThermostatID);
-          devices.hb[item.ThermostatID.toString()] = toHb(item);
-        });
-      } else {
-        // console.log("normalizeToHb", LocationInfo.Thermostats);
-        devices.hb[LocationInfo.Thermostats.ThermostatInfo.ThermostatID.toString()] = toHb(LocationInfo.Thermostats.ThermostatInfo);
-      }
-    });
-  } else {
-    if (Array.isArray(devices.LocationInfo.Thermostats.ThermostatInfo)) {
-      devices.LocationInfo.Thermostats.ThermostatInfo.forEach((item, i) => {
-        // debug("normalizeToHb", item.ThermostatID);
+  devices.hb = {};
+  const locationInfos = Array.isArray(devices.LocationInfo)
+    ? devices.LocationInfo
+    : devices.LocationInfo
+      ? [devices.LocationInfo]
+      : [];
+
+  locationInfos
+    .map((LocationInfo) => LocationInfo?.Thermostats?.ThermostatInfo)
+    .filter((info) => info !== undefined && info !== null)
+    .forEach((info) => {
+      (Array.isArray(info) ? info : [info]).forEach((item) => {
         devices.hb[item.ThermostatID.toString()] = toHb(item);
       });
-    } else {
-      devices.hb[devices.LocationInfo.Thermostats.ThermostatInfo.ThermostatID.toString()] = toHb(devices.LocationInfo.Thermostats.ThermostatInfo);
-    }
-  }
-  // debug("normalizeToHb", devices.hb);
+    });
+
   return devices;
 }
 
 function toHb(thermostat) {
-  var response = {};
+  const response = {};
 
   response.ThermostatID = thermostat.ThermostatID;
   response.Name = thermostat.UserDefinedDeviceName;
@@ -142,18 +149,29 @@ function toHb(thermostat) {
   response.OutsideHumidity = thermostat.UI.OutdoorHumidity;
   response.InsideHumidity = thermostat.UI.IndoorHumidity;
   response.device = thermostat;
+  // Track the last physical heat mode (0=emergency heat, 1=regular heat)
+  // This is used when setting heat mode from HomeKit to maintain user's physical thermostat preference
+  if (thermostat.UI.SystemSwitchPosition === 0 || thermostat.UI.SystemSwitchPosition === 1) {
+    response.LastPhysicalHeatMode = thermostat.UI.SystemSwitchPosition;
+  }
   return response;
 }
 
 function toCelcius(value, thermostat) {
-  if (value) {
-    return (thermostat.UI.DisplayedUnits === "C" ? parseFloat(value) : parseFloat((value - 32) * 5 / 9).toFixed(1));
+  if (value !== null && value !== undefined) {
+    return (thermostat.UI.DisplayedUnits === "C" ? parseFloat(value) : parseFloat(((value - 32) * 5 / 9).toFixed(1)));
   } else {
     return null;
   }
 }
 
 function toThermostat(value, thermostat) {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!thermostat || !thermostat.device || !thermostat.device.UI) {
+    return value;
+  }
   return (thermostat.device.UI.DisplayedUnits === "C" ? value : ((value * 9 / 5) + 32).toFixed(0));
 }
 
@@ -174,20 +192,16 @@ function currentState(thermostat) {
 }
 
 function stateValidValues(thermostat) {
-  var response = [];
-  if (thermostat.UI.CanSetSwitchOff) {
-    response.push(0);
-  }
-  if (thermostat.UI.CanSetSwitchHeat) {
-    response.push(1);
-  }
-  if (thermostat.UI.CanSetSwitchCool) {
-    response.push(2);
-  }
-  if (thermostat.UI.CanSetSwitchAuto) {
-    response.push(3);
-  }
-  return response;
+  const mapping = [
+    ['CanSetSwitchOff', 0],
+    ['CanSetSwitchHeat', 1],
+    ['CanSetSwitchCool', 2],
+    ['CanSetSwitchAuto', 3]
+  ];
+
+  return mapping
+    .map(([flag, value]) => (thermostat.UI[flag] ? value : undefined))
+    .filter((value) => value !== undefined);
 }
 
 function targetState(thermostat) {
@@ -216,12 +230,13 @@ function targetState(thermostat) {
 }
 
 function targetTemperature(thermostat) {
-  var targetTemperature;
+  let targetTemperature;
   switch (thermostat.UI.SystemSwitchPosition) {
     case 2: // Off
       // Not sure what to do here, so will use heat set point
       targetTemperature = thermostat.UI.HeatSetpoint;
       break;
+    case 0: // Emergency heat
     case 1: // Heat
     case 4: // Auto heat
       targetTemperature = thermostat.UI.HeatSetpoint;
@@ -235,18 +250,27 @@ function targetTemperature(thermostat) {
       targetTemperature = thermostat.UI.DispTemperature;
   }
 
-  return (targetTemperature);
+  return targetTemperature;
 }
 
 function systemSwitch(desiredState, thermostat) {
-  // debug("systemSwitch desiredState.TargetHeatingCooling", desiredState);
-  var state;
+  // var debug = require('debug')('tcc-libMessage');
+  let state;
   switch (desiredState.TargetHeatingCooling) {
     case 0: // Off
       state = 2;
       break;
     case 1: // Heat
-      state = 1;
+      // Use the last physical heat mode preference if available
+      // This allows maintaining emergency heat vs regular heat preference
+      if (thermostat.LastPhysicalHeatMode !== undefined &&
+        (thermostat.LastPhysicalHeatMode === 0 || thermostat.LastPhysicalHeatMode === 1)) {
+        state = thermostat.LastPhysicalHeatMode;
+        // debug("Using LastPhysicalHeatMode=%s for heat command", state);
+      } else {
+        state = 1; // Default to regular heat
+        // debug("No LastPhysicalHeatMode found, using default regular heat (1)");
+      }
       break;
     case 2: // Cool
       state = 3;
@@ -255,66 +279,59 @@ function systemSwitch(desiredState, thermostat) {
       state = 4;
       break;
     case undefined:
-      // debug("systemSwitch undefined", thermostat.device.UI.SystemSwitchPosition);
       state = thermostat.device.UI.SystemSwitchPosition;
       break;
     default:
-      // debug("systemSwitch default");
       state = thermostat.device.UI.SystemSwitchPosition;
   }
 
   thermostat.device.UI.SystemSwitchPosition = state;
-  return (state);
+  return state;
 }
 
 function heatSetpoint(desiredState, thermostat) {
-  // debug("desiredState.heatSetpoint", desiredState, thermostat);
-  // HeatingThresholdTemperature
-  var response = thermostat.device.UI.HeatSetpoint;
-  if (desiredState.TargetTemperature || desiredState.HeatingThresholdTemperature) {
-    switch (thermostat.device.UI.SystemSwitchPosition) {
-      case 0: // TCC Emergency Heat
-      case 1: // TCC Heat
-        response = toThermostat(desiredState.TargetTemperature, thermostat);
-        break;
-      case 2: // TCC Off
-        break;
-      case 3: // TCC Cool
-        break;
-      case 4: // TCC Auto heat
-      case 5: // TCC Auto cool
-        response = toThermostat(desiredState.HeatingThresholdTemperature, thermostat);
-        break;
-    }
+  const ui = thermostat.device.UI;
+  const targetDefined = desiredState.TargetTemperature !== undefined;
+  const thresholdDefined = desiredState.HeatingThresholdTemperature !== undefined;
+
+  if (!targetDefined && !thresholdDefined) {
+    return ui.HeatSetpoint;
   }
-  // debug("desiredState.heatSetpoint", desiredState, response);
-  return response;
+
+  if ((ui.SystemSwitchPosition === 0 || ui.SystemSwitchPosition === 1) && targetDefined) {
+    return toThermostat(desiredState.TargetTemperature, thermostat);
+  }
+
+  if ((ui.SystemSwitchPosition === 4 || ui.SystemSwitchPosition === 5) && thresholdDefined) {
+    return toThermostat(desiredState.HeatingThresholdTemperature, thermostat);
+  }
+
+  return ui.HeatSetpoint;
 }
 
 function coolSetpoint(desiredState, thermostat) {
-  // console.log("desiredState.coolSetpoint", desiredState);
-  // CoolingThresholdTemperature
-  var response = thermostat.device.UI.CoolSetpoint;
-  // debug("coolSetpoint", getThermostat(desiredState.ThermostatID).UI, response);
-  if (desiredState.TargetTemperature || desiredState.CoolingThresholdTemperature) {
-    switch (thermostat.device.UI.SystemSwitchPosition) {
-      case 1: // TCC Heat
-      case 2: // TCC Off
-        break;
-      case 3: // TCC Cool
-        if (desiredState.TargetTemperature) {
-          response = toThermostat(desiredState.TargetTemperature, thermostat);
-        } else if (desiredState.CoolingThresholdTemperature) {
-          response = toThermostat(desiredState.CoolingThresholdTemperature, thermostat);
-        }
-        break;
-      case 4: // TCC Auto heat
-      case 5: // TCC Auto cool
-        response = toThermostat(desiredState.CoolingThresholdTemperature, thermostat);
-        break;
+  const ui = thermostat.device.UI;
+  const targetDefined = desiredState.TargetTemperature !== undefined;
+  const thresholdDefined = desiredState.CoolingThresholdTemperature !== undefined;
+
+  if (!targetDefined && !thresholdDefined) {
+    return ui.CoolSetpoint;
+  }
+
+  if (ui.SystemSwitchPosition === 3) {
+    if (targetDefined) {
+      return toThermostat(desiredState.TargetTemperature, thermostat);
+    }
+    if (thresholdDefined) {
+      return toThermostat(desiredState.CoolingThresholdTemperature, thermostat);
     }
   }
-  return response;
+
+  if ((ui.SystemSwitchPosition === 4 || ui.SystemSwitchPosition === 5) && thresholdDefined) {
+    return toThermostat(desiredState.CoolingThresholdTemperature, thermostat);
+  }
+
+  return ui.CoolSetpoint;
 }
 
 function diff(obj1, obj2) {
@@ -338,5 +355,65 @@ function isEmptyObject(obj) {
   for (name in obj) {
     return false;
   }
+  return true;
+}
+
+function validateThermostatData(data, context = 'thermostat') {
+  // Basic type check
+  if (!data || typeof data !== 'object') {
+    throw new Error(`Invalid ${context} data: not an object`);
+  }
+
+  // Required fields
+  const requiredFields = ['ThermostatID', 'Name'];
+  for (const field of requiredFields) {
+    if (data[field] === undefined || data[field] === null) {
+      throw new Error(`Invalid ${context} data: missing required field '${field}'`);
+    }
+  }
+
+  // Validate temperature fields if present
+  const tempFields = [
+    'CurrentTemperature',
+    'TargetTemperature',
+    'HeatingThresholdTemperature',
+    'CoolingThresholdTemperature',
+    'OutsideTemperature'
+  ];
+
+  for (const field of tempFields) {
+    if (data[field] !== undefined && data[field] !== null) {
+      const temp = data[field];
+      // Reasonable temperature range: -50°C to 60°C
+      if (typeof temp !== 'number' || temp < -50 || temp > 60) {
+        console.warn(`Warning: Suspicious temperature value for ${field}: ${temp}°C in ${context}`);
+      }
+    }
+  }
+
+  // Validate state values if present
+  if (data.CurrentHeatingCoolingState !== undefined) {
+    if (![0, 1, 2].includes(data.CurrentHeatingCoolingState)) {
+      throw new Error(`Invalid CurrentHeatingCoolingState: ${data.CurrentHeatingCoolingState}`);
+    }
+  }
+
+  if (data.TargetHeatingCoolingState !== undefined) {
+    if (![0, 1, 2, 3].includes(data.TargetHeatingCoolingState)) {
+      throw new Error(`Invalid TargetHeatingCoolingState: ${data.TargetHeatingCoolingState}`);
+    }
+  }
+
+  // Validate humidity if present (0-100, or 128 for invalid)
+  const humidityFields = ['InsideHumidity', 'OutsideHumidity'];
+  for (const field of humidityFields) {
+    if (data[field] !== undefined && data[field] !== null) {
+      const humidity = data[field];
+      if (humidity !== 128 && (humidity < 0 || humidity > 100)) {
+        console.warn(`Warning: Suspicious humidity value for ${field}: ${humidity}% in ${context}`);
+      }
+    }
+  }
+
   return true;
 }

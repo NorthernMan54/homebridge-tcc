@@ -1,4 +1,20 @@
 const soapRequest = require('easy-soap-request');
+<<<<<<< HEAD
+const { XMLBuilder, XMLParser } = require('fast-xml-parser');
+const tccMessage = require('./tccMessage.js');
+const debug = require('debug')('tcc-lib');
+const { default: PQueue } = require('p-queue');
+
+const queue = new PQueue({ concurrency: 1 });
+
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '',
+  textNodeName: '$t',
+  parseAttributeValue: true,
+  parseTagValue: true,
+  trimValues: true
+=======
 const { XMLParser, XMLBuilder } = require('fast-xml-parser');
 var tccMessage = require('./tccMessage.js');
 var debug = require('debug')('tcc-lib');
@@ -12,10 +28,17 @@ const xmlParser = new XMLParser({
   trimValues: true,
   parseTrueNumberOnly: true,
   arrayMode: false
+>>>>>>> main
 });
 
 const xmlBuilder = new XMLBuilder({
   ignoreAttributes: false,
+<<<<<<< HEAD
+  attributeNamePrefix: '',
+  textNodeName: '$t',
+  format: false,
+  suppressEmptyNode: true
+=======
   attributeNamePrefix: "@",
   suppressEmptyNode: true,
   format: false
@@ -25,17 +48,18 @@ const {
 } = require('p-queue');
 const queue = new PQueue({
   concurrency: 1
+>>>>>>> main
 });
 
 let count = 0;
+const queueLogger = debug.extend('queue');
 queue.on('active', () => {
-  debug(`Queue: Working on item #${++count}.  Size: ${queue.size}  Pending: ${queue.pending}`);
+  queueLogger(`Working on item #${++count}. Size: ${queue.size} Pending: ${queue.pending}`);
 });
-// var thermostats = {};
 
 const URL = 'https://TCCNA.resideo.com/ws/MobileV2.asmx';
 
-var HEADER = {
+const HEADER = {
   'user-agent': 'TCCStageC/1092 CFNetwork/1125.2 Darwin/19.4.0',
   'Content-Type': 'text/xml;charset=UTF-8',
   'ADRUM': 'isAjax:true',
@@ -49,11 +73,33 @@ module.exports = {
   tcc: tcc
 };
 
-function tcc(options, callback) {
+function tcc(options) {
   if (options.debug) {
     debug.enabled = true;
   }
-  debug("Setting up TCC component");
+  this.logger = options.logger ? options.logger.child(['API']) : null;
+  this.logDebug = (...args) => {
+    if (this.logger) {
+      this.logger.debug(...args);
+    } else {
+      debug(...args);
+    }
+  };
+  this.logInfo = (...args) => {
+    if (this.logger) {
+      this.logger.info(...args);
+    } else {
+      console.log(...args);
+    }
+  };
+  this.logError = (...args) => {
+    if (this.logger) {
+      this.logger.error(...args);
+    } else {
+      console.error(...args);
+    }
+  };
+  this.logDebug('Setting up TCC component');
   this._username = options.username;
   this._password = options.password;
   this._refresh = options.refresh;
@@ -71,18 +117,40 @@ tcc.prototype.pollThermostat = function() {
     try {
       if (!this.sessionID) {
         this.sessionID = await this._login();
-        debug("TCC - Login Succeeded");
+        this.logDebug("TCC - Login Succeeded");
       }
       var current = await this._GetLocationListData(true);
       if (this.thermostats.LocationInfo && current.LocationInfo) {
-        debug("pollThermostat - delta", JSON.stringify(tccMessage.diff(this.thermostats, current), null, 2));
+        this.logDebug("pollThermostat - delta", JSON.stringify(tccMessage.diff(this.thermostats, current), null, 2));
+      }
+      // Validate all thermostats before storing
+      if (current.hb) {
+        for (const id in current.hb) {
+          try {
+            tccMessage.validateThermostatData(current.hb[id], `pollThermostat ID:${id}`);
+          } catch (err) {
+            this.logError(`Validation failed for thermostat ${id}: %s`, err.message);
+          }
+        }
+      }
+      // Preserve LastPhysicalHeatMode across updates
+      if (this.thermostats && this.thermostats.hb && current.hb) {
+        for (const id in current.hb) {
+          if (this.thermostats.hb[id] && this.thermostats.hb[id].LastPhysicalHeatMode !== undefined) {
+            // Preserve existing heat mode preference if not updated in current poll
+            if (current.hb[id].LastPhysicalHeatMode === undefined) {
+              current.hb[id].LastPhysicalHeatMode = this.thermostats.hb[id].LastPhysicalHeatMode;
+              this.logDebug("Preserved LastPhysicalHeatMode=%s for thermostat %s", current.hb[id].LastPhysicalHeatMode, id);
+            }
+          }
+        }
       }
       this.thermostats = current;
       return (current);
     } catch (err) {
-      // console.error("pollThermostat Error:", err.message);
-      // debug("pollThermostat", err);
-      throw new Error(err);
+      this.logError('pollThermostat Error: %s', err.message);
+      this.logDebug("pollThermostat", err);
+      throw err;
     }
   });
 };
@@ -90,22 +158,85 @@ tcc.prototype.pollThermostat = function() {
 // Public interface to login and update specific thermostat settings
 
 tcc.prototype.ChangeThermostat = function(desiredState) {
-  // debug("ChangeThermostat()", desiredState);
+  // this.logDebug("ChangeThermostat()", desiredState);
+  return queue.add(async () => {
+    let updateSucceeded = false;
+    let commTaskSucceeded = false;
+
+    try {
+      if (!this.sessionID) {
+        this.sessionID = await this._login();
+        this.logDebug("TCC - Login Succeeded");
+        this.thermostats = await this._GetLocationListData(true);
+      }
+
+      var CommTaskID = await this._UpdateThermostat(desiredState, true);
+      updateSucceeded = true; // Update was sent successfully
+      this.logDebug("TCC - Update thermostat succeeded, CommTaskID:", CommTaskID);
+
+      await this._GetCommTaskState(CommTaskID);
+      commTaskSucceeded = true; // Server confirmed the change
+      this.logDebug("TCC - CommTask confirmed");
+
+      var thermostat = await this._GetThermostat(desiredState.ThermostatID);
+      this.logDebug("TCC - Retrieved updated thermostat data");
+      tccMessage.validateThermostatData(thermostat, 'ChangeThermostat result');
+      return (thermostat);
+    } catch (err) {
+      this.logError('ChangeThermostat Error: %s', err.message);
+
+      // If update succeeded but we just failed to get fresh data back
+      if (updateSucceeded && commTaskSucceeded) {
+        this.logDebug("Update succeeded but failed to retrieve fresh data, using optimistic update");
+        // Return cached data with optimistic update
+        const cached = this.thermostats.hb[desiredState.ThermostatID];
+        if (cached) {
+          // Apply the changes we know were made
+          const optimistic = Object.assign({}, cached);
+          if (desiredState.TargetTemperature !== undefined) {
+            optimistic.TargetTemperature = desiredState.TargetTemperature;
+          }
+          if (desiredState.HeatingThresholdTemperature !== undefined) {
+            optimistic.HeatingThresholdTemperature = desiredState.HeatingThresholdTemperature;
+          }
+          if (desiredState.CoolingThresholdTemperature !== undefined) {
+            optimistic.CoolingThresholdTemperature = desiredState.CoolingThresholdTemperature;
+          }
+          if (desiredState.TargetHeatingCooling !== undefined) {
+            optimistic.TargetHeatingCoolingState = desiredState.TargetHeatingCooling;
+            // If setting to heat mode, preserve the heat mode type that was used
+            if (desiredState.TargetHeatingCooling === 1 && cached.LastPhysicalHeatMode !== undefined) {
+              optimistic.LastPhysicalHeatMode = cached.LastPhysicalHeatMode;
+            }
+          }
+          // Mark for refresh on next poll
+          this.logDebug("Returning optimistic data, will refresh on next poll");
+          return optimistic;
+        }
+      }
+
+      this.sessionID = null;
+      throw err;
+    }
+  });
+};
+
+// Public interface to retrieve a single thermostat snapshot
+
+tcc.prototype.getThermostatSnapshot = function(ThermostatID) {
   return queue.add(async () => {
     try {
       if (!this.sessionID) {
         this.sessionID = await this._login();
-        debug("TCC - Login Succeeded");
-        this.thermostats = await this._GetLocationListData(true);
+        this.logDebug("TCC - Login Succeeded");
       }
-      var CommTaskID = await this._UpdateThermostat(desiredState, true);
-      await this._GetCommTaskState(CommTaskID);
-      var thermostat = await this._GetThermostat(desiredState.ThermostatID);
-      return (thermostat);
+      const thermostat = await this._GetThermostat(ThermostatID);
+      tccMessage.validateThermostatData(thermostat, `getThermostatSnapshot ID:${ThermostatID}`);
+      return thermostat;
     } catch (err) {
-      console.error("ChangeThermostat Error:", err);
+      this.logError('getThermostatSnapshot Error: %s', err.message);
       this.sessionID = null;
-      throw new Error(err);
+      throw err;
     }
   });
 };
@@ -113,7 +244,7 @@ tcc.prototype.ChangeThermostat = function(desiredState) {
 // private interface to update thermostat settings
 
 tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
-  debug("_UpdateThermostat()", desiredState);
+  this.logDebug("_UpdateThermostat()", desiredState);
   return new Promise((resolve, reject) => {
     (async () => {
       try {
@@ -121,11 +252,28 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
           this.sessionID = await this._login();
         }
         HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/ChangeThermostatUI';
+<<<<<<< HEAD
+
+        // Get cached thermostat data
+        const cachedThermostat = this.thermostats.hb[desiredState.ThermostatID];
+
+        // Inject persisted LastPhysicalHeatMode from desiredState (comes from accessory context)
+        // This ensures the preference persists across Homebridge restarts
+        if (desiredState.LastPhysicalHeatMode !== undefined && cachedThermostat) {
+          cachedThermostat.LastPhysicalHeatMode = desiredState.LastPhysicalHeatMode;
+          this.logDebug("Using persisted LastPhysicalHeatMode=%s for thermostat %s", desiredState.LastPhysicalHeatMode, desiredState.ThermostatID);
+        }
+
+        const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, cachedThermostat, this.usePermanentHolds)));
+        this.logDebug("_UpdateThermostat: SOAP Message", message, this.sessionID, desiredState, cachedThermostat, this.usePermanentHolds);
+        const { response } = await soapRequest({
+=======
         var message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds)));
         debug("_UpdateThermostat: SOAP Message", message, this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds);
         var {
           response
         } = await soapRequest({
+>>>>>>> main
           url: URL,
           headers: HEADER,
           xml: message,
@@ -133,33 +281,43 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
           withCredentials: true
         });
         if (response.statusCode === 200) {
+<<<<<<< HEAD
+          const parsedResponse = xmlParser.parse(response.body);
+          const ChangeThermostat = parsedResponse["soap:Envelope"]["soap:Body"].ChangeThermostatUIResponse.ChangeThermostatUIResult;
+          // this.logDebug("_UpdateThermostat", ChangeThermostat);
+=======
           var ChangeThermostat = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].ChangeThermostatUIResponse.ChangeThermostatUIResult;
           // debug("_UpdateThermostat", ChangeThermostat);
+>>>>>>> main
           if (ChangeThermostat.Result === "Success") {
-            debug("Success: _UpdateThermostat %s", ChangeThermostat, message);
+            this.logDebug("Success: _UpdateThermostat %s", ChangeThermostat, message);
             resolve(ChangeThermostat.CommTaskID);
           } else {
             this.sessionID = null;
-            debug("ERROR: _UpdateThermostat %s", ChangeThermostat.Result, message);
+            this.logDebug("ERROR: _UpdateThermostat %s", ChangeThermostat.Result, message);
             if (withRetry) {
               try {
                 const CommTaskID = await this._UpdateThermostat(desiredState, false);
                 resolve(CommTaskID);
               } catch (err) {
-                debug("ERROR: _UpdateThermostat retry");
+                this.logDebug("ERROR: _UpdateThermostat retry");
                 reject(err);
               }
             } else {
-              reject(new Error("ERROR: _UpdateThermostat (200)", ChangeThermostat.Result));
+              reject(new Error("ERROR: _UpdateThermostat (200) " + ChangeThermostat.Result));
             }
           }
         } else {
-          debug("ERROR: _UpdateThermostat %s", response, message);
-          reject(new Error("ERROR: _UpdateThermostat (!200)", ChangeThermostat.Result));
+          this.logDebug("ERROR: _UpdateThermostat %s", response, message);
+          reject(new Error("ERROR: _UpdateThermostat (!200)"));
         }
       } catch (err) {
+<<<<<<< HEAD
+        this.logDebug("_UpdateThermostat message", xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds))));
+=======
         // console.error("_UpdateThermostat Error:", err);
         debug("_UpdateThermostat message", xmlBuilder.build(tccMessage.soapMessage(tccMessage.ChangeThermostatMessage(this.sessionID, desiredState, this.thermostats.hb[desiredState.ThermostatID], this.usePermanentHolds))));
+>>>>>>> main
         reject(err);
         this.sessionID = null;
       }
@@ -169,6 +327,17 @@ tcc.prototype._UpdateThermostat = function(desiredState, withRetry) {
 
 // private interface to login to TCC
 
+<<<<<<< HEAD
+tcc.prototype._login = async function() {
+  HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/AuthenticateUserLogin';
+  const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.AuthenticateUserLoginMessage(this._username, this._password)));
+  const { response } = await soapRequest({
+    url: URL,
+    headers: HEADER,
+    xml: message,
+    timeout: this.timeout,
+    withCredentials: true
+=======
 tcc.prototype._login = function() {
   return new Promise((resolve, reject) => {
     (async () => {
@@ -201,11 +370,34 @@ tcc.prototype._login = function() {
         reject(err);
       }
     })();
+>>>>>>> main
   });
+  if (response.statusCode === 200) {
+    const parsedResponse = xmlParser.parse(response.body);
+    const AuthenticateUserLoginResponse = parsedResponse["soap:Envelope"]["soap:Body"].AuthenticateUserLoginResponse;
+    if (AuthenticateUserLoginResponse.AuthenticateUserLoginResult.Result === "Success") {
+      return AuthenticateUserLoginResponse.AuthenticateUserLoginResult.SessionID;
+    } else {
+      throw new Error(AuthenticateUserLoginResponse.AuthenticateUserLoginResult.Result);
+    }
+  } else {
+    throw new Error("Login Response Status Code " + response.statusCode);
+  }
 };
 
 // private interface to retrieve status of a thermostat update
 
+<<<<<<< HEAD
+tcc.prototype._GetCommTaskState = async function(CommTaskID) {
+  HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetCommTaskState';
+  const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetCommTaskStateMessage(this.sessionID, CommTaskID)));
+  const { response } = await soapRequest({
+    url: URL,
+    headers: HEADER,
+    xml: message,
+    timeout: this.timeout,
+    withCredentials: true
+=======
 tcc.prototype._GetCommTaskState = function(CommTaskID) {
   // SOAPAction http://services.alarmnet.com/Services/MobileV2/GetCommTaskState
   return new Promise((resolve, reject) => {
@@ -242,11 +434,37 @@ tcc.prototype._GetCommTaskState = function(CommTaskID) {
         reject(err);
       }
     })();
+>>>>>>> main
   });
+  if (response.statusCode === 200) {
+    const parsedResponse = xmlParser.parse(response.body);
+    const GetCommTaskStateResponse = parsedResponse["soap:Envelope"]["soap:Body"].GetCommTaskStateResponse;
+    if (GetCommTaskStateResponse.GetCommTaskStateResult.Result === "Success") {
+      this.logDebug("GetCommTaskState Success %s", GetCommTaskStateResponse.GetCommTaskStateResult);
+      return;
+    } else {
+      this.logDebug("ERROR: GetCommTaskState Failed %s", GetCommTaskStateResponse.GetCommTaskStateResult, message);
+      throw new Error("ERROR: GetCommTaskState Failed " + GetCommTaskStateResponse.GetCommTaskStateResult.Result);
+    }
+  } else {
+    this.logDebug("ERROR: GetCommTaskState Response Status Code", response.statusCode, message);
+    throw new Error("ERROR: GetCommTaskState Response Status Code " + response.statusCode);
+  }
 };
 
 // private interface to retrieve thermostat settings
 
+<<<<<<< HEAD
+tcc.prototype._GetThermostat = async function(ThermostatID) {
+  HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetThermostat';
+  const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetThermostatMessage(this.sessionID, ThermostatID)));
+  const { response } = await soapRequest({
+    url: URL,
+    headers: HEADER,
+    xml: message,
+    timeout: this.timeout,
+    withCredentials: true
+=======
 tcc.prototype._GetThermostat = function(ThermostatID) {
   // SOAPAction http://services.alarmnet.com/Services/MobileV2/GetThermostat
   return new Promise((resolve, reject) => {
@@ -286,11 +504,54 @@ tcc.prototype._GetThermostat = function(ThermostatID) {
         reject(err);
       }
     })();
+>>>>>>> main
   });
+  if (response.statusCode === 200) {
+    const parsedResponse = xmlParser.parse(response.body);
+    const GetThermostatResult = parsedResponse["soap:Envelope"]["soap:Body"].GetThermostatResponse.GetThermostatResult;
+    if (GetThermostatResult.Result === "Success") {
+      const thermostatData = tccMessage.toHb(GetThermostatResult.Thermostat);
+      // Preserve LastPhysicalHeatMode if not set in current update
+      const idString = ThermostatID.toString();
+      if (this.thermostats && this.thermostats.hb && this.thermostats.hb[idString]) {
+        if (thermostatData.LastPhysicalHeatMode === undefined && this.thermostats.hb[idString].LastPhysicalHeatMode !== undefined) {
+          thermostatData.LastPhysicalHeatMode = this.thermostats.hb[idString].LastPhysicalHeatMode;
+          this.logDebug("Preserved LastPhysicalHeatMode=%s for thermostat %s", thermostatData.LastPhysicalHeatMode, idString);
+        }
+      }
+      this.thermostats.hb[idString] = thermostatData;
+      return thermostatData;
+    } else {
+      this.logDebug("ERROR: GetThermostat Failed %s", GetThermostatResult.Result, message);
+      throw new Error("ERROR: GetThermostat Failed " + GetThermostatResult.Result);
+    }
+  } else {
+    this.logDebug("ERROR: GetThermostat Response Status Code", response.statusCode, message);
+    throw new Error("ERROR: GetThermostat Response Status Code " + response.statusCode);
+  }
 };
 
 // private interface to retrieve all thermostat settings
 
+<<<<<<< HEAD
+tcc.prototype._GetLocationListData = async function(withRetry) {
+  try {
+    if (!this.sessionID) {
+      this.sessionID = await this._login();
+    }
+    HEADER.soapAction = 'http://services.alarmnet.com/Services/MobileV2/GetLocations';
+    const message = '<?xml version="1.0" encoding="utf-8"?>' + xmlBuilder.build(tccMessage.soapMessage(tccMessage.GetLocationsMessage(this.sessionID)));
+    const { response } = await soapRequest({
+      url: URL,
+      headers: HEADER,
+      xml: message,
+      timeout: this.timeout,
+      withCredentials: true
+    });
+    if (response.statusCode === 200) {
+      const parsedResponse = xmlParser.parse(response.body);
+      const GetLocationsResult = parsedResponse["soap:Envelope"]["soap:Body"].GetLocationsResponse.GetLocationsResult;
+=======
 tcc.prototype._GetLocationListData = function(withRetry) {
   return new Promise((resolve, reject) => {
     (async () => {
@@ -312,36 +573,31 @@ tcc.prototype._GetLocationListData = function(withRetry) {
         });
         if (response.statusCode === 200) {
           var GetLocationsResult = xmlParser.parse(response.body)["soap:Envelope"]["soap:Body"].GetLocationsResponse.GetLocationsResult;
+>>>>>>> main
 
-          if (GetLocationsResult.Result === "Success" && GetLocationsResult.Locations.LocationInfo) {
-            // this.sessionID = AuthenticateUserLoginResponse.AuthenticateUserLoginResult.SessionID;
-            // debug("_GetLocationListData", JSON.stringify(GetLocationsResult, null, 2));
-            // debug("_GetLocationListData-2", GetLocationsResult.Locations.LocationInfo);
-            resolve(tccMessage.normalizeToHb(GetLocationsResult.Locations));
-          } else {
-            this.sessionID = null;
-            if (withRetry) {
-              try {
-                const locListData = await this._GetLocationListData(false);
-                resolve(locListData);
-              } catch (err) {
-                debug("error get locations retry", err);
-                reject(err);
-              }
-            } else {
-              debug("GetLocations error, Info:  %s", GetLocationsResult.Result);
-              reject(new Error("GetLocations " + GetLocationsResult.Result));
-            }
+      if (GetLocationsResult.Result === "Success" && GetLocationsResult.Locations && GetLocationsResult.Locations.LocationInfo) {
+        return tccMessage.normalizeToHb(GetLocationsResult.Locations);
+      } else {
+        this.sessionID = null;
+        if (withRetry) {
+          try {
+            return await this._GetLocationListData(false);
+          } catch (err) {
+            this.logDebug("error get locations retry", err);
+            throw err;
           }
         } else {
-          debug("GetLocations error, statusCode: %s", response.statusCode);
-          reject(new Error("ERROR: GetLocations Response Status Code", response.statusCode));
+          this.logDebug("GetLocations error, Info:  %s", GetLocationsResult.Result);
+          throw new Error("GetLocations " + GetLocationsResult.Result);
         }
-      } catch (err) {
-        console.error("GetLocations Error:", err);
-        this.sessionID = null;
-        reject(err);
       }
-    })();
-  });
+    } else {
+      this.logDebug("GetLocations error, statusCode: %s", response.statusCode);
+      throw new Error("ERROR: GetLocations Response Status Code " + response.statusCode);
+    }
+  } catch (err) {
+    this.logError('GetLocations Error: %s', err.message || err);
+    this.sessionID = null;
+    throw err;
+  }
 };
