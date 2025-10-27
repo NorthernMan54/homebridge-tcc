@@ -30,8 +30,8 @@ function soapMessage(body) {
       "@xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/",
       "@xmlns": "http://services.alarmnet.com/Services/MobileV2/",
       "soap:Body": body
-      }
     }
+  }
   );
 }
 
@@ -70,54 +70,22 @@ function ChangeThermostatMessage(sessionID, desiredState, thermostat, usePermane
   // debug("ChangeThermostatMessage", desiredState);
   return ({
     ChangeThermostatUI: {
-      sessionID: {
-        $t: sessionID
-      },
-      thermostatID: {
-        $t: desiredState.ThermostatID
-      },
-      changeSystemSwitch: {
-        $t: 1
-      },
-      systemSwitch: {
-        $t: systemSwitch(desiredState, thermostatCopy)
-      },
-      changeHeatSetpoint: {
-        $t: 1
-      },
-      heatSetpoint: {
-        $t: heatSetpoint(desiredState, thermostatCopy)
-      },
-      changeCoolSetpoint: {
-        $t: 1
-      },
-      coolSetpoint: {
-        $t: coolSetpoint(desiredState, thermostatCopy)
-      },
-      changeHeatNextPeriod: {
-        $t: 1
-      },
-      heatNextPeriod: {
-        $t: thermostatCopy.device.UI.HeatNextPeriod
-      },
-      changeCoolNextPeriod: {
-        $t: 1
-      },
-      coolNextPeriod: {
-        $t: thermostatCopy.device.UI.CoolNextPeriod
-      },
-      changeStatusHeat: {
-        $t: 1
-      },
-      statusHeat: {
-        $t: (usePermanentHolds ? 2 : 1)
-      },
-      changeStatusCool: {
-        $t: 1
-      },
-      statusCool: {
-        $t: (usePermanentHolds ? 2 : 1)
-      }
+      sessionID: sessionID,
+      thermostatID: desiredState.ThermostatID,
+      changeSystemSwitch: 1,
+      systemSwitch: systemSwitch(desiredState, thermostat),
+      changeHeatSetpoint: 1,
+      heatSetpoint: heatSetpoint(desiredState, thermostat),
+      changeCoolSetpoint: 1,
+      coolSetpoint: coolSetpoint(desiredState, thermostat),
+      changeHeatNextPeriod: 1,
+      heatNextPeriod: thermostat.device.UI.HeatNextPeriod,
+      changeCoolNextPeriod: 1,
+      coolNextPeriod: thermostat.device.UI.CoolNextPeriod,
+      changeStatusHeat: 1,
+      statusHeat: (usePermanentHolds ? 2 : 1),
+      changeStatusCool: 1,
+      statusCool: (usePermanentHolds ? 2 : 1)
     }
   });
 }
@@ -296,7 +264,7 @@ function systemSwitch(desiredState, thermostat) {
       // Use the last physical heat mode preference if available
       // This allows maintaining emergency heat vs regular heat preference
       if (thermostat.LastPhysicalHeatMode !== undefined &&
-          (thermostat.LastPhysicalHeatMode === 0 || thermostat.LastPhysicalHeatMode === 1)) {
+        (thermostat.LastPhysicalHeatMode === 0 || thermostat.LastPhysicalHeatMode === 1)) {
         state = thermostat.LastPhysicalHeatMode;
         // debug("Using LastPhysicalHeatMode=%s for heat command", state);
       } else {
