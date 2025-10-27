@@ -65,7 +65,7 @@ function ChangeThermostatMessage(sessionID, desiredState, thermostat, usePermane
     throw new Error("Invalid thermostat data in ChangeThermostatMessage");
   }
   // Make a deep copy to avoid modifying the cached thermostat object
-  const thermostatCopy = JSON.parse(JSON.stringify(thermostat));
+  // const thermostatCopy = JSON.parse(JSON.stringify(thermostat));
 
   // debug("ChangeThermostatMessage", desiredState);
   return ({
