@@ -9,7 +9,13 @@ module.exports = {
   GetThermostatMessage: GetThermostatMessage,
   normalizeToHb: normalizeToHb,
   toHb: toHb,
-  diff: diff
+  diff: diff,
+  // additional helpers required by tests
+  toCelcius: toCelcius,
+  toThermostat: toThermostat,
+  heatSetpoint: heatSetpoint,
+  coolSetpoint: coolSetpoint,
+  systemSwitch: systemSwitch
 };
 
 function soapMessage(body) {
@@ -20,8 +26,8 @@ function soapMessage(body) {
       "@xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/",
       "@xmlns": "http://services.alarmnet.com/Services/MobileV2/",
       "soap:Body": body
-      }
     }
+  }
   );
 }
 
